@@ -12,7 +12,7 @@
         "name": "HenryYves"
       },
       "category": "development",
-      "source": "."
+      "source": "./plugin"
     }
   ]
 }
