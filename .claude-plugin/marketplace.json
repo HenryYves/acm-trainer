@@ -1,22 +1,14 @@
 {
-  "name": "acm-trainer",
+  "name": "Yves-plugin",
   "owner": {
-    "name": "HenryYves"
-  },
-  "metadata": {
-    "description": "ACM/ICPC 算法竞赛训练助手 — 题解、代码审查、算法讲解、复杂度分析",
-    "version": "0.1.0"
+    "name": "HenryYves",
+    "email": "get_better@foxmail.com"
   },
   "plugins": [
     {
       "name": "acm-trainer",
-      "source": {
-        "source": "github",
-        "repo": "HenryYves/acm-trainer"
-      },
-      "description": "ACM/ICPC 算法竞赛训练助手。支持用户配置持久化（代码位置、渐进式引导、模板分析、语言偏好）。",
-      "category": "development",
-      "tags": ["acm", "icpc", "algorithm", "code-review", "competitive-programming"]
+      "source": "./",
+      "description": "ACM/ICPC 算法竞赛训练助手。支持用户配置持久化（代码位置、渐进式引导、模板分析、语言偏好）。"
     }
   ]
 }
