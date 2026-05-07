@@ -68,6 +68,7 @@ code_paths:
   default: /path/to/my.cpp
   A: /path/to/sub_project/A/A.cpp
 progressive_hints: true
+auto_edit_code: false              # whether to auto-edit code files
 terminology: mixed                 # pure_chinese | mixed
 solution_language: cpp             # cpp | py | match_code
 time_limit_baseline: 100000000     # O(N) safe N per second
@@ -79,6 +80,8 @@ per_problem_constants:
   - name: maxn
     line: 45
     default_value: "1e5 + 20"
+config_version: "0.2.0"
+last_modified: "2026-05-07"
 ---
 # Template Summary
 ...

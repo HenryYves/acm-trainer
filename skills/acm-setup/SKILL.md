@@ -45,7 +45,17 @@ AskUserQuestion:
   - "是，默认渐进式引导" — 先给方向/提示，等用户要求再展开
   - "否，直接给答案" — 直接给出醍醐灌顶句 + 完整解法
 
-## Step 4: Template Code
+## Step 4: Auto Edit Code
+
+AskUserQuestion:
+- header: "自动修改"
+- question: "是否允许代码审查时自动发起代码修改请求？（选"不允许"则仅文字提示，不主动修改文件）"
+- multiSelect: false
+- options:
+  - "不允许（默认）" — 只给出修改建议的文字说明，不主动编辑/创建代码文件
+  - "允许" — 发现问题后可以直接用 Edit/Write 修改或创建代码文件
+
+## Step 5: Template Code
 
 AskUserQuestion:
 - header: "模板代码"
@@ -55,10 +65,10 @@ AskUserQuestion:
   - "没有模板" — 跳过模板分析
   - "有，请分析" — 追问模板文件路径
 
-If user chooses "有，请分析", ask for the absolute path to the template `.cpp` file. Read it and proceed to Step 5.
-Otherwise skip to Step 6.
+If user chooses "有，请分析", ask for the absolute path to the template `.cpp` file. Read it and proceed to Step 6.
+Otherwise skip to Step 7.
 
-## Step 5: Template Analysis
+## Step 6: Template Analysis
 
 Read the template file. Identify:
 
@@ -83,7 +93,7 @@ Read the template file. Identify:
 - Custom `rd()` function — competes with standard `cin >>`, do not mix.
 - `init_win_env()` — if forgotten on Windows, terminal color escapes won't work.
 
-### Step 5a: Confirm Per-Problem Constants
+### Step 6a: Confirm Per-Problem Constants
 
 If candidate per-problem constants were found (step 8 above), present them to the user:
 
@@ -96,9 +106,9 @@ AskUserQuestion:
 
 Only save the constants the user selects into the config. Those not selected are treated as fixed template boilerplate and won't be flagged during code review.
 
-If no candidates were found, skip to Step 6 without asking.
+If no candidates were found, skip to Step 7 without asking.
 
-## Step 6: Terminology Style
+## Step 7: Terminology Style
 
 AskUserQuestion:
 - header: "术语风格"
@@ -108,7 +118,7 @@ AskUserQuestion:
   - "中文为主，保留常见英文缩写" — DP、BFS、DFS 等保留，segment tree→线段树
   - "纯中文（英文术语也翻译）" — DP→动态规划，BFS→广度优先搜索
 
-## Step 7: Solution Language
+## Step 8: Solution Language
 
 AskUserQuestion:
 - header: "编程语言"
@@ -119,7 +129,7 @@ AskUserQuestion:
   - "Python" — 代码全部用 Python
   - "与当前代码一致" — 用户贴什么语言就回什么语言；未贴代码时默认用 C++
 
-## Step 8: Time Limit Baseline
+## Step 9: Time Limit Baseline
 
 AskUserQuestion:
 - header: "评测机速度"
@@ -146,7 +156,7 @@ This value determines the Safe N table used in complexity analysis (see workflow
 
 Python solutions get approximately 1/30 of the C++ baseline.
 
-## Step 9: Preview & Confirm
+## Step 10: Preview & Confirm
 
 Show a summary of all choices:
 
@@ -154,6 +164,7 @@ Show a summary of all choices:
 === ACM Trainer 配置预览 ===
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
+自动修改代码: <允许/不允许>
 模板代码: <无 / 路径 + 摘要>
 变值常量: <无 / 选中的常量名列表>
 术语风格: <pure_chinese / mixed>
@@ -172,7 +183,7 @@ AskUserQuestion:
 
 If user cancels, exit without writing.
 
-## Step 10: Write Config
+## Step 11: Write Config
 
 Generate `.claude/acm-trainer.local.md`:
 
@@ -184,9 +195,12 @@ code_paths:
   default: <path or dir or "">
   <keyword>: <path>  # only for files mode
 progressive_hints: <true|false>
+auto_edit_code: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
+config_version: "0.2.0"
+last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>
 template_path: "<path or empty>"
 template_boundary: <line number, 0 if no template>
@@ -213,7 +227,7 @@ per_problem_constants:
 
 Write the file with Write tool. Do NOT use Bash for file creation.
 
-## Step 11: Verify
+## Step 12: Verify
 
 Confirm: "配置已保存到 `.claude/acm-trainer.local.md`。可以试试发一道算法题来测试。"
 

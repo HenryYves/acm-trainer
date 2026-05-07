@@ -1,6 +1,6 @@
 {
   "name": "acm-trainer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "ACM/ICPC 算法竞赛训练助手，提供题解、代码审查、算法讲解、复杂度分析。支持用户配置初始化。",
   "author": {
     "name": "Yves",

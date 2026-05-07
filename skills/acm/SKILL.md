@@ -9,16 +9,32 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 
 ## Startup
 
-Read `.claude/acm-trainer.local.md` if it exists. Parse YAML frontmatter for:
-- `code_location_mode` / `code_paths` — where user code files are (`none`, `single`, `per_problem`, `files`)
-- `progressive_hints` — whether to default to progressive hints
-- `terminology` — `pure_chinese` or `mixed`
-- `solution_language` — `cpp`, `py`, or `match_code` (default `cpp` when no user code present)
-- `has_template` / `template_path` / `template_boundary` / `template_entry` — template info
-- `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value)
-- `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis (default 1e8)
+Read `.claude/acm-trainer.local.md` if it exists. Parse YAML frontmatter for the fields listed below. **For each field, use the documented default if the field is missing** (old configs may lack newer fields):
+
+- `code_location_mode` / `code_paths` — where user code files are (`none`, `single`, `per_problem`, `files`). Default: `code_location_mode: none`.
+- `progressive_hints` — whether to default to progressive hints. Default: `true`.
+- `auto_edit_code` — whether to auto-edit/create code files. Default: `false`.
+- `terminology` — `pure_chinese` or `mixed`. Default: `mixed`.
+- `solution_language` — `cpp`, `py`, or `match_code`. Default: `cpp` (when no user code present).
+- `has_template` / `template_path` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`.
+- `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
+- `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
+- `config_version` — config schema version (for migration checks). Default: `"0.1.0"` (intentionally low to trigger migration prompt for old configs).
+- `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
+
+If `config_version` is missing or older than `"0.2.0"`, mention: "检测到旧版配置文件（缺少部分新设置项），可运行 `/acm-trainer:acm-setup` 更新。" but continue with defaults for missing fields.
+
+> **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
+
+## Auto-Edit Behavior
+
+When `auto_edit_code` is `false` (default): Only provide text-based suggestions for code changes. Use code blocks to show the diff/fix, but do NOT call Edit or Write tools to modify user files. The user decides whether and how to apply changes.
+
+When `auto_edit_code` is `true`: After identifying bugs or needed changes during code review, may directly call Edit or Write tools to fix user code files, in addition to text explanation.
+
+The user can override at any time by saying "直接改" or "别改我文件".
 
 ## Language Rules
 

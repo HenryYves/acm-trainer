@@ -18,8 +18,11 @@ Read `.claude/acm-trainer.local.md`.
 
 ```
 === ACM Trainer 当前配置 ===
+配置版本: <config_version>
+最后修改: <last_modified>
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
+自动修改代码: <允许/不允许>
 术语风格: <pure_chinese/mixed>
 编程语言: <cpp/py/match_code>
 模板代码: <路径 or 无>
@@ -39,6 +42,7 @@ AskUserQuestion:
 - options:
   - "代码位置" — 重新选择代码存放方式
   - "引导方式" — 切换渐进式引导开关
+  - "自动修改代码" — 切换是否允许代码审查时自动发起修改请求
   - "术语风格" — 切换纯中文 / 保留缩写
   - "编程语言" — 切换 C++ / Python / 跟随当前代码
   - "重新分析模板" — 重新指定模板文件并分析（含变值常量确认）
@@ -53,9 +57,11 @@ For each selected item, ask the new value using AskUserQuestion. Use the same op
 
 For "变值常量": present the full list of candidates from the template (re-scan the template file), let user toggle which ones vary. This replaces the existing `per_problem_constants` list.
 
-For "重新分析模板": re-run the full template analysis (Step 4 + Step 5 + Step 5a of acm-setup), including per-problem constant confirmation.
+For "自动修改代码": ask with the same question as acm-setup Step 4. Toggle `auto_edit_code`.
 
-For "评测机速度": use the same options as acm-setup Step 8. Update `time_limit_baseline`.
+For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + Step 6a of acm-setup), including per-problem constant confirmation.
+
+For "评测机速度": use the same options as acm-setup Step 9. Update `time_limit_baseline`.
 
 ## Step 4: Preview & Confirm
 
@@ -64,6 +70,7 @@ Show before/after diff:
 ```
 === 变更预览 ===
 渐进式引导: false → true
+自动修改代码: false → true
 术语风格: mixed → pure_chinese
 编程语言: cpp → match_code
 ===============
@@ -79,6 +86,6 @@ AskUserQuestion:
 
 ## Step 5: Write
 
-Merge changes into the existing YAML frontmatter. Preserve the markdown body (template summary) unchanged unless "重新分析模板" or "变值常量" was selected — in that case update the relevant sections.
+Merge changes into the existing YAML frontmatter. Update `last_modified` to today's date (YYYY-MM-DD). Preserve the markdown body (template summary) unchanged unless "重新分析模板" or "变值常量" was selected — in that case update the relevant sections.
 
 Write with Write tool. Confirm: "配置已更新。"
