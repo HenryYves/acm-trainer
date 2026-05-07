@@ -27,6 +27,7 @@ If user config has `has_template: true`, apply these rules:
    - Custom I/O (`rd()`/`pr()`) — do not mix with `cin`/`cout`
    - Missing `init_win_env()` call on Windows
 4. When macros appear in user code, mentally expand them to check for hidden bugs (e.g., `max(i++, j--)` expands to `((i++) > (j--) ? (i++) : (j--))` — double increment/decrement).
+5. If `per_problem_constants` is non-empty, check whether each constant's current value is appropriate for the problem's constraints. For example, if `maxn` is `1e5+20` but the problem states N ≤ 2×10⁵, flag it. This check applies to array sizes, modulo values, and other problem-specific constants.
 
 ## Bug Scan
 

@@ -23,10 +23,10 @@ When the user asks about a specific algorithm or data structure:
 1. **醍醐灌顶句** — one sentence: what problem this solves, when to use it, and how it differs from easily-confused alternatives
 2. **Intuition first** — the core idea, not the mechanics
 3. **Mechanics** — how it works step-by-step
-4. **C++ implementation** — clean, minimal template code. Only the core parts, not over-engineered.
+4. **Code implementation** — clean, minimal code in the configured `solution_language` (C++ or Python). Only the core parts, not over-engineered. If `match_code`, use the language of the user's current code context.
 5. **Complexity** — time and space
 6. **When to use** — problem patterns that signal this algorithm
-7. **C++ gotchas** — recursion depth, STL pitfalls, performance notes
+7. **Language-specific gotchas** — for C++: recursion depth, STL pitfalls, performance notes. For Python: recursion limit, input speed, list vs deque, default recursion depth.
 8. **Practice problems** — 3-5 problems from CF/Luogu/AtCoder with difficulty order and short descriptions
 
 Keep explanations concise. Practice problems are more valuable than long explanations.
@@ -43,9 +43,24 @@ When analyzing time/space complexity:
 
 ### 1-Second Time Limit Guidelines
 
-| Complexity | Safe N |
-|-----------|--------|
-| O(N log N) | ~10⁶ |
-| O(N) | ~10⁸ |
-| O(N²) | ~5000 |
-| O(2^N) | ~20 |
+Compute Safe N from `time_limit_baseline` (config value, default 1e8 = O(N) safe per second):
+
+```
+B = time_limit_baseline
+
+O(N log N) safe ≈ B / 20
+O(N) safe     = B
+O(N√N) safe   ≈ √B × 0.7
+O(N²) safe    ≈ √B × 0.5
+O(2^N) safe   ≈ log₂(B) × 0.8
+```
+
+| Complexity | Safe N (C++, B=1e8) | Safe N (Python, B/30) |
+|-----------|---------------------|------------------------|
+| O(N log N) | ~5×10⁶ | ~1.7×10⁵ |
+| O(N) | ~1×10⁸ | ~3.3×10⁶ |
+| O(N√N) | ~7×10³ | ~1.3×10³ |
+| O(N²) | ~5×10³ | ~900 |
+| O(2^N) | ~21 | ~21 |
+
+Python is approximately 30× slower than C++. For Python solutions, use B/30 as the effective baseline.

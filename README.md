@@ -6,6 +6,9 @@
 
 题解推导 · 代码审查 · 算法讲解 · 复杂度分析 · Hack 数据生成
 
+
+[English](README-EN.md)
+
 </div>
 
 ---
@@ -22,21 +25,25 @@
 
 ## 📦 安装
 
-```
-/plugin marketplace add HenryYves/acm-trainer
-/plugin install acm-trainer@acm-trainer --scope project
-/reload-plugins
+```bash
+/plugin marketplace add HenryYves/acm-trainer # 添加市场
+/plugin marketplace add https://github.com/HenryYves/acm-trainer # 用这个也可以
+
+
+/plugin install acm-trainer@acm-trainer --scope project # 安装插件(后面的`--scope project`表示只为当前项目安装而不是全局安装,对于通常只在一个文件(项目)里面写题的人推荐添加这个参数或者手动修改skill的yaml使其不能被主Agent自动触发.)
+
+/reload-plugins # 重载插件
 ```
 
 ## 🚀 快速开始
 
 ```
-/acm-trainer:acm-setup     # 首次运行 — 5 步完成初始化
+/acm-trainer:acm-setup     # 首次运行 — 5 步完成初始化;`acm-trainer:`为命名空间可省略
 /acm-trainer:acm-config    # 随时查看 / 修改配置
 /acm-trainer:acm           # 主入口 — 贴题目、贴代码、问算法
 ```
 
-> 主 skill 会根据上下文自动激活——直接贴题目或代码即可，无需手动调用。
+> 主 Agent 会根据上下文自动激活——直接贴题目或代码即可，无需手动调用。亦可使用命令`\acm`指定，可以节省少量token。
 
 ## 🧩 结构
 
@@ -47,7 +54,7 @@ acm-trainer/
 │   └── plugin.json
 ├── skills/
 │   ├── acm/               # 主训练 skill
-│   │   └── references/    # 详细工作流（按需加载）
+│   │   └── references/    # 详细工作流（按需加载以节省token）
 │   ├── acm-setup/          # 初始化向导
 │   └── acm-config/         # 配置管理
 └── README.md
@@ -59,27 +66,32 @@ acm-trainer/
 
 ```yaml
 ---
-code_location_mode: single        # none | single | multi
+code_location_mode: files          # none | single | per_problem | files
 code_paths:
-  default: D:\my\solutions
-progressive_hints: false
-terminology: mixed                # pure_chinese | mixed
-solution_lang: zh                 # zh | en | bilingual
+  default: D:\my\my.cpp
+  A: D:\my\sub_project\A\A.cpp
+progressive_hints: true
+terminology: mixed                 # pure_chinese | mixed
+solution_language: cpp             # cpp | py | match_code
+time_limit_baseline: 100000000     # O(N) safe N per second
 has_template: true
 template_path: D:\my\template.cpp
 template_boundary: 80
 template_entry: "solve() // L87"
+per_problem_constants:
+  - name: maxn
+    line: 45
+    default_value: "1e5 + 20"
 ---
 # Template Summary
 ...
+## Per-Problem Constants
+- `maxn` (L45, 默认 1e5+20): 数组大小上限，每题需检查
 ```
-
-> 加入 `.gitignore`：`.claude/*.local.md`
 
 ---
 
 <div align="center">
-
 **Made with ❤️ for competitive programmers**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

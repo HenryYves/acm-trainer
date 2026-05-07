@@ -1,6 +1,6 @@
 ---
 name: acm-setup
-description: This skill should be used when the user asks to "acm初始化", "配置acm", "acm setup", "setup acm", "初始化acm训练助手", "首次使用acm", or wants to configure ACM trainer settings for the first time. Provides a deterministic guided setup wizard that collects code location, progressive hints preference, template analysis, and language settings, then writes configuration to .claude/acm-trainer.local.md.
+description: This skill should be used when the user asks to "acm初始化", "配置acm", "acm setup", "setup acm", "初始化acm训练助手", "首次使用acm", or wants to configure ACM trainer settings for the first time. Provides a deterministic guided setup wizard that collects code location, progressive hints preference, template analysis, solution language, and terminology settings, then writes configuration to .claude/acm-trainer.local.md.
 allowed-tools: Read, Write, AskUserQuestion, Glob, Grep
 ---
 
@@ -19,15 +19,21 @@ Read `.claude/acm-trainer.local.md` if it exists.
 
 AskUserQuestion:
 - header: "代码位置"
-- question: "你的解题代码平时放在哪里？"
+- question: "你的解题代码平时怎么存放？"
 - multiSelect: false
 - options:
-  - "不固定，每次自己贴代码" — 无预设位置，每次手动粘贴
-  - "单个文件夹" — 追问具体路径
-  - "多个位置，用关键词区分" — 追问关键词到路径的映射（如 cf→D:\cf\solutions）
+  - "不固定，每次自己贴代码" — 无预设位置，每次手动粘贴代码到对话
+  - "固定一个文件" — 所有题目写在一个文件里（如 my.cpp），追问具体路径
+  - "一题一个文件" — 每道题一个独立文件（常见于浏览器插件获取题目自动创建文件的场景），追问文件存放目录
+  - "多个文件，用关键词区分" — 几个固定文件用简短关键词标记（如 my→my.cpp, A→A.cpp），追问关键词→路径映射
 
-If user chooses "单个文件夹", ask for the absolute path. Validate it exists or warn.
-If user chooses "多个位置", ask for comma-separated key→path pairs (e.g., "cf=D:\cf, luogu=D:\luogu").
+**"不固定"** → set `code_location_mode: none`, skip to Step 3.
+
+**"固定一个文件"** → ask for the absolute path. Validate it exists or warn. Set `code_location_mode: single`.
+
+**"一题一个文件"** → ask for the directory where problem files are stored. If the user has a naming convention (e.g., `{problem_id}.cpp`), ask optionally. Set `code_location_mode: per_problem`. Record the directory in `code_paths.default`.
+
+**"多个文件，用关键词区分"** → ask for comma-separated key→path mapping (e.g., "my=D:\my.cpp, A=D:\sub_project\A\A.cpp"). Set `code_location_mode: files`.
 
 ## Step 3: Progressive Hints
 
@@ -63,6 +69,12 @@ Read the template file. Identify:
 5. **Debug infrastructure**: `hs_f_debug` flag, `de(x)` macro, `strde`.
 6. **Required init**: `init_win_env()` must be called in `main()` on Windows.
 7. **Entry point**: Where does user code go? (e.g., `solve()` function, the line number where it starts).
+8. **Per-problem constants**: Scan `constexpr`/`const` definitions for values likely to change between problems:
+   - Array size limits: `maxn`, `MAXN`, `N`, `MAX_N`
+   - Modulo values: `MOD`, `mod`, `mod1`, `mod2`
+   - Other "magic numbers" that look problem-specific (e.g., `inf`, `LIMIT`)
+   
+   Collect candidates into a list. Each candidate should note: name, line number, current value.
 
 **Template gotchas to flag** (these are the things that cause bugs):
 - `#define max(a,b)` / `#define min(a,b)` — function-style macros, conflict with `std::max`/`std::min`, double-evaluation side effects.
@@ -71,7 +83,20 @@ Read the template file. Identify:
 - Custom `rd()` function — competes with standard `cin >>`, do not mix.
 - `init_win_env()` — if forgotten on Windows, terminal color escapes won't work.
 
-Save the analysis as markdown in the template summary body of the config file (Step 7).
+### Step 5a: Confirm Per-Problem Constants
+
+If candidate per-problem constants were found (step 8 above), present them to the user:
+
+AskUserQuestion:
+- header: "变值常量"
+- question: "以下常量中，哪些每道题会需要改值？（多选）"
+- multiSelect: true
+- options: one per candidate, e.g., "maxn (当前值: 1e5+20, 第45行) — 数组大小上限"
+  plus one option: "以上全都不变" — 所有值都是固定的，无需每题调整
+
+Only save the constants the user selects into the config. Those not selected are treated as fixed template boilerplate and won't be flagged during code review.
+
+If no candidates were found, skip to Step 6 without asking.
 
 ## Step 6: Terminology Style
 
@@ -86,25 +111,54 @@ AskUserQuestion:
 ## Step 7: Solution Language
 
 AskUserQuestion:
-- header: "题解语言"
-- question: "题解和代码注释用什么语言？"
+- header: "编程语言"
+- question: "题解代码用什么编程语言？"
 - multiSelect: false
 - options:
-  - "中文"
-  - "英文"
-  - "中英双语"
+  - "C++" — 代码全部用 C++
+  - "Python" — 代码全部用 Python
+  - "与当前代码一致" — 用户贴什么语言就回什么语言；未贴代码时默认用 C++
 
-## Step 8: Preview & Confirm
+## Step 8: Time Limit Baseline
+
+AskUserQuestion:
+- header: "评测机速度"
+- question: "你常用 OJ 的评测机大概多快？（以 C++ 1秒能做多少次基础操作为基准）"
+- multiSelect: false
+- options:
+  - "标准（约 10⁸）" — 大多数 OJ（Codeforces、AtCoder、洛谷等）的水平
+  - "偏慢（约 5×10⁷）" — 较老或资源受限的 OJ
+  - "较慢（约 3×10⁷）" — 明显偏慢的评测环境
+  - "偏快（约 2×10⁸）" — 较新的高性能评测机
+  - "自定义" — 用户自己输入一个值
+
+If "自定义", ask for the specific number (N for O(N) in 1s). Record as `time_limit_baseline`.
+
+This value determines the Safe N table used in complexity analysis (see workflows.md):
+
+| Complexity | Safe N formula |
+|-----------|----------------|
+| O(N) | baseline |
+| O(N log N) | baseline / 20 |
+| O(N√N) | √(baseline) × 0.7 |
+| O(N²) | √(baseline) × 0.5 |
+| O(2^N) | log₂(baseline) × 0.8 |
+
+Python solutions get approximately 1/30 of the C++ baseline.
+
+## Step 9: Preview & Confirm
 
 Show a summary of all choices:
 
 ```
 === ACM Trainer 配置预览 ===
-代码位置: <summary>
+代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
 模板代码: <无 / 路径 + 摘要>
+变值常量: <无 / 选中的常量名列表>
 术语风格: <pure_chinese / mixed>
-题解语言: <zh / en / bilingual>
+编程语言: <cpp / py / match_code>
+评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom value>
 =========================
 ```
 
@@ -118,40 +172,48 @@ AskUserQuestion:
 
 If user cancels, exit without writing.
 
-## Step 9: Write Config
+## Step 10: Write Config
 
 Generate `.claude/acm-trainer.local.md`:
 
 **YAML frontmatter:**
 ```yaml
 ---
-code_location_mode: <none|single|multi>
+code_location_mode: <none|single|per_problem|files>
 code_paths:
-  default: <path or "">
-  <keyword>: <path>
+  default: <path or dir or "">
+  <keyword>: <path>  # only for files mode
 progressive_hints: <true|false>
 terminology: <pure_chinese|mixed>
-solution_lang: <zh|en|bilingual>
+solution_language: <cpp|py|match_code>
+time_limit_baseline: <100000000 (1e8) or custom value>
 has_template: <true|false>
 template_path: "<path or empty>"
 template_boundary: <line number, 0 if no template>
 template_entry: "<entry description or empty>"
+per_problem_constants:
+  - name: <constant name>
+    line: <line number>
+    default_value: "<current value in template>"
 ---
 ```
 
-**Markdown body** (only if has_template):
+**Markdown body** (only if has_template or per_problem_constants):
 ```markdown
 # Template Summary
 
-<template analysis from Step 5>
+<template analysis from Step 5 — aliases, macros, I/O, debug, entry point>
 
 ## Gotchas
 <list of template-specific bugs to watch for>
+
+## Per-Problem Constants
+<list of constants the user confirmed need per-problem adjustment, with default values>
 ```
 
 Write the file with Write tool. Do NOT use Bash for file creation.
 
-## Step 10: Verify
+## Step 11: Verify
 
 Confirm: "配置已保存到 `.claude/acm-trainer.local.md`。可以试试发一道算法题来测试。"
 
