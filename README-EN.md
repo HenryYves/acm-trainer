@@ -46,6 +46,9 @@ Problem Solving · Code Review · Algorithm Explanation · Complexity Analysis �
 ```
 acm-trainer/
 ├── .claude-plugin/
+│   ├── MODIFICATION.md         # Modification guide (AI-oriented, not for humans)
+│   ├── changelog/              # Version changelogs (AI-oriented, not for humans)
+│   │   └── 0.2.2.md ...        # Loaded on demand, one file per version
 │   ├── marketplace.json
 │   └── plugin.json
 ├── skills/
@@ -56,6 +59,8 @@ acm-trainer/
 ├── README.md
 └── README-EN.md
 ```
+
+> `.claude-plugin/MODIFICATION.md` and `changelog/*.md` are for skill-creator (AI) to read. Their format is optimized for token efficiency (flat lists, arrows, no decoration) — not meant for human reading.
 
 ## ⚙️ Configuration
 

@@ -1,173 +1,91 @@
 # acm-trainer 修改指南
+> 导航索引。skill-creator/模型读此文件后按路径找目标，不搜索。
+> 改完改版本号：.claude-plugin/plugin.json → version
 
-> **本文件给 skill-creator 用**：记录每次改了什么、为什么这样改、踩了什么坑。下次 skill-creator 改这个插件时先读一遍，少耗 token，别重蹈覆辙。
+## 文件清单
+路径相对插件根目录。
 
-**⚠️ 修改完别忘了改版本号**：`.claude-plugin/plugin.json` → `"version"` 字段。这是最容易被遗忘的一步。
+##=== 核心文件 ===##
+skills/acm/SKILL.md             -- 主技能：启动配置解析 + 场景路由 + 行为规则
+skills/acm/references/code-review.md  -- 代码审查工作流（重场景才加载）
+skills/acm/references/workflows.md    -- 题解/算法讲解/复杂度分析（重场景才加载）
+skills/acm-config/SKILL.md      -- 配置管理：查看/修改用户配置
+skills/acm-setup/SKILL.md       -- 初始化向导：首次配置引导
+README.md / README-EN.md        -- 用户文档
 
-当通过 `/plugin-dev:create-plugin` 或直接编辑修改本插件时，**必须参考本文件**。每次修改后**更新本文件的更新历史**。
+##=== 元数据 ===##
+.claude-plugin/plugin.json          -- 插件清单（改版本号改这里）
+.claude-plugin/marketplace.json     -- 市场信息
+.claude-plugin/MODIFICATION.md      -- 你在这里
+.claude-plugin/changelog/0.2.X.md   -- 每次修改的完整背景和教训
 
----
+##=== 用户侧 ===##
+.claude/acm-trainer.local.md    -- 用户配置文件（运行时读取，不在此插件内）
+
+## 需求→文件 速查
+| 我要做什么 | 读 |
+|-----------|-----|
+| 了解插件结构/修改规则 | MODIFICATION.md（本文件） |
+| 改主技能行为 | skills/acm/SKILL.md |
+| 改代码审查流程 | skills/acm/references/code-review.md |
+| 改题解/算法讲解流程 | skills/acm/references/workflows.md |
+| 改配置管理 | skills/acm-config/SKILL.md |
+| 改初始化向导 | skills/acm-setup/SKILL.md |
+| 看历史修改背景 | .claude-plugin/changelog/<版本>.md |
+| 改 README | README.md / README-EN.md |
 
 ## 交叉引用清单
+新增/修改配置项时全部检查：
+1. skills/acm-setup/SKILL.md   -- 加收集步骤 + YAML模板字段
+2. skills/acm-config/SKILL.md  -- 加展示行 + 修改选项 + Step3处理逻辑
+3. skills/acm/SKILL.md         -- 加字段解析 + 默认回退值 + 行为规则
+4. README.md                   -- 加YAML示例字段
+5. README-EN.md                -- 同上
+6. .claude/acm-trainer.local.md（用户侧）-- 不改，但考虑旧配置缺字段时的回退
 
-新增或修改一个配置项时，以下文件**全部需要检查**：
+规则：acm-setup步骤编号变→同步acm-config引用；字段名6处一致；默认值acm-setup与acm一致
 
-| # | 文件 | 需要做什么 |
-|---|------|-----------|
-| 1 | `skills/acm-setup/SKILL.md` | 在初始化向导中添加收集该配置的步骤；在预览 (Preview) 和写入配置 (Write Config) 的 YAML 模板中加入新字段 |
-| 2 | `skills/acm-config/SKILL.md` | 在"当前配置展示"中加入该字段的展示行；在"修改选项"中加入可勾选的条目；在 Step 3 (Apply Changes) 中加入对应的处理逻辑 |
-| 3 | `skills/acm/SKILL.md` | 在 Startup 解析列表中列出该字段及**默认回退值**；在行为规则中描述该配置如何影响技能行为 |
-| 4 | `README.md` | 在 YAML 配置示例中加入该字段 |
-| 5 | `README-EN.md` | 同上（英文版） |
-| 6 | `.claude/acm-trainer.local.md` (用户侧) | 无需修改插件，但需考虑**旧配置文件缺少新字段时的回退行为** |
+## 依赖关系
+acm/SKILL.md → 启动读 .claude/acm-trainer.local.md
+acm/SKILL.md → 场景路由 code-review.md / workflows.md
+acm/SKILL.md → 修改参考 MODIFICATION.md
+acm-setup/SKILL.md → 读 template_path → 写 .claude/acm-trainer.local.md
+acm-config/SKILL.md → 读/写 .claude/acm-trainer.local.md → 引用 acm-setup 步骤号
+README.md / README-EN.md → 与 acm-setup YAML模板同步
 
-### 交叉引用更新规则
+## 配置项清单
+字段 | 类型 | 默认 | acm-setup步骤 | acm章节
+code_location_mode  | enum   | none        | Step 2  | Code Location
+code_paths          | map    | {}          | Step 2  | Code Location
+progressive_hints   | bool   | true        | Step 3  | Teaching Approach
+auto_edit_code      | bool   | false       | Step 4  | Auto-Edit Behavior
+has_template        | bool   | false       | Step 5  | Template-Aware Review
+template_path       | string | ""          | Step 5  | Template-Aware Review
+template_boundary   | int    | 0           | Step 6  | Template-Aware Review
+template_entry      | string | ""          | Step 6  | Template-Aware Review
+per_problem_constants|list  | []          | Step 6a | Template-Aware Review
+terminology         | enum   | mixed       | Step 7  | Language Rules
+solution_language   | enum   | cpp         | Step 8  | Solution Language
+time_limit_baseline | int    | 100000000   | Step 9  | Complexity Analysis
+config_version      | string | "0.2.0"     | Step 11 | 迁移检查
+last_modified       | date   | ""          | Step 11 | 迁移检查
 
-- **acm-setup 步骤编号变更**：如果新增/删除步骤导致编号变化，必须同步更新 acm-config 中对 acm-setup 步骤号的引用
-- **字段名一致性**：同一个字段在以上 6 处必须使用完全相同的名称
-- **默认值一致性**：acm-setup 的默认选项和 acm 的 fallback 值必须一致
+## 版本管理
+acm-setup: 首次创建写入版本+日期
+acm-config: 每次保存更新 last_modified
+acm: 启动检查 config_version，过旧提示用户可重新初始化（不强制）
 
----
-
-## 添加新配置项的完整步骤
-
-以本次 `auto_edit_code` 为例：
-
-1. **acm-setup/SKILL.md**
-   - [x] 在合适位置插入新 Step（Step 4: Auto Edit Code）
-   - [x] 后续步骤全部重新编号（4→5, 5→6, ... 11→12）
-   - [x] 预览 (Step 10) 加入 `自动修改代码: <允许/不允许>`
-   - [x] YAML 模板 (Step 11) 加入 `auto_edit_code: <true|false>`
-   - [x] 检查内部交叉引用：`skip to Step 6` → `skip to Step 7`
-
-2. **acm-config/SKILL.md**
-   - [x] 当前配置展示加入 `自动修改代码: <允许/不允许>`
-   - [x] 修改选项加入 `"自动修改代码"` 条目
-   - [x] Step 3 加入处理逻辑：`For "自动修改代码": ask with the same question as acm-setup Step 4`
-   - [x] 更新对 acm-setup 步骤号的引用（Step 8→9, Step 4+5+5a→5+6+6a）
-   - [x] 预览示例加入 `自动修改代码: false → true`
-
-3. **acm/SKILL.md**
-   - [x] Startup 解析列表加入 `` `auto_edit_code` — whether to auto-edit/create code files (default false) ``
-   - [x] 新增 Auto-Edit Behavior 章节描述两种模式行为
-
-4. **README.md + README-EN.md**
-   - [x] YAML 配置示例加入 `auto_edit_code: false`
-
-5. **回退兼容** (本次后新增规则)
-   - [x] acm/SKILL.md 中为每个字段标注 `(default xxx)` fallback
-
----
-
-## 文件依赖关系图
-
-```
-acm/SKILL.md (主技能)
-    ├── 启动时读取 → .claude/acm-trainer.local.md (用户配置)
-    ├── 场景路由 → references/code-review.md
-    ├── 场景路由 → references/workflows.md
-    └── 修改参考 → .claude-plugin/MODIFICATION.md (本文件)
-
-acm-setup/SKILL.md (初始化向导)
-    ├── 读取模板 → template_path (用户指定)
-    ├── 写入配置 → .claude/acm-trainer.local.md
-    └── 被引用 ← acm-config/SKILL.md
-
-acm-config/SKILL.md (配置管理)
-    ├── 读取配置 → .claude/acm-trainer.local.md
-    ├── 写入配置 → .claude/acm-trainer.local.md
-    └── 引用步骤 → acm-setup/SKILL.md
-
-README.md / README-EN.md
-    └── 展示配置示例 → 需与 acm-setup YAML 模板同步
-```
-
----
-
-## 配置项完整清单
-
-| 字段 | 类型 | 默认值 | 设置位置 (acm-setup) | 使用位置 (acm) |
-|------|------|--------|---------------------|---------------|
-| `code_location_mode` | enum | `none` | Step 2 | Code Location |
-| `code_paths` | map | `{}` | Step 2 | Code Location |
-| `progressive_hints` | bool | `true` | Step 3 | Teaching Approach |
-| `auto_edit_code` | bool | `false` | Step 4 | Auto-Edit Behavior |
-| `has_template` | bool | `false` | Step 5 | Template-Aware Review |
-| `template_path` | string | `""` | Step 5 | Template-Aware Review |
-| `template_boundary` | int | `0` | Step 6 | Template-Aware Review |
-| `template_entry` | string | `""` | Step 6 | Template-Aware Review |
-| `per_problem_constants` | list | `[]` | Step 6a | Template-Aware Review |
-| `terminology` | enum | `mixed` | Step 7 | Language Rules |
-| `solution_language` | enum | `cpp` | Step 8 | Solution Language |
-| `time_limit_baseline` | int | `100000000` | Step 9 | Complexity Analysis |
-| `config_version` | string | `"0.2.0"` | Step 11 (auto) | — (迁移检查) |
-| `last_modified` | date | `""` | Step 11 (auto) | — (迁移检查) |
-
----
-
-## 配置文件版本管理
-
-用户配置文件 `.claude/acm-trainer.local.md` 包含 `config_version` 和 `last_modified`：
-
-- **acm-setup**: 首次创建时写入当前插件版本和日期
-- **acm-config**: 每次保存修改时更新 `last_modified`
-- **acm**: 启动时检查 `config_version`，如果缺失或过旧，提示用户考虑重新初始化（不强制）
-
----
+## 核心教训
+- MODIFICATION.md写给AI不是人：用扁平列表不用ASCII树，用箭头不用框图，用紧凑格式不用装饰性分隔线和blockquote。省token=省时间。(v0.2.3)
+- changelog文件也是AI向：README结构里只列第一个版本+省略号，避免每次新增版本都要改README。(v0.2.3)
+- 不提工具名=不用该工具：指令里出现Glob/bash等工具名，模型就可能去用它。阻止行为的方式是完全不提。(v0.2.3)
+- 路径必须写锚点：相对路径被模型猜错，写"project root / current working directory"。(v0.2.2)
+- 参考文件按需加载：Scenario Routing只对"重"场景触发reference，简单问答用skill正文。(v0.2.2)
+- 权限合并是追加式：acm-setup Step13不覆盖已有.claude/settings.local.json。(v0.2.2)
 
 ## 更新历史
-
-| 日期 | 版本 | 变更 |
-|------|------|------|
-| 2026-05-09 | 0.2.2 | acm: 明确配置路径在项目根目录、启动加载顺序规则、简单问题跳过参考文件；acm-setup: 新增 Step 13 自动配置权限 | → 详见下方 § 0.2.2 修正详情 |
-| 2026-05-07 | 0.2.1 | 新增 `auto_edit_code` 配置项；配置新增 `config_version`/`last_modified` 字段；acm 添加所有字段的回退默认值；创建本修改指南 |
-| 2026-05-06 | 0.2.0 | 初始版本：acm/acm-setup/acm-config 三个技能，code_location/progressive_hints/terminology/solution_language/time_limit_baseline/template 配置 |
-
----
-
-## 0.2.2 修正详情（2026-05-09）
-
-### 触发背景
-
-用户报告 acm skill 每次使用都有两个痛点：
-1. **启动时搜索配置浪费 token**：skill 说 `Read .claude/acm-trainer.local.md` 但没指定路径，模型会猜 `~/.claude/`、搜插件缓存目录、Glob 全局搜索……实际配置就在项目根目录的 `.claude/` 下。一次简单的"参数写反了"问题产生了 **37,821 个未命中缓存 token，占费用的 88%（~0.11元）**。
-2. **每次读配置文件都弹授权**：Read/Glob/Bash 操作需要逐次确认，打断流程。
-
-### 问题诊断（实测 token 分布）
-
-| 内容 | 是否必要 | 问题 |
-|------|---------|------|
-| code-review.md (125行) | **不需要** | 简单问题"这个函数参数什么意思"触发了完整 bug scan 流程 |
-| 两次 Glob + 一次 Bash ls | **不需要** | 配置路径模糊导致反复搜索 |
-| acm-trainer.local.md | 必要 | 但被读了两次（先猜错路径失败，再搜索后读到） |
-
-**根因**：skill 没说清楚配置的**绝对位置**（只写了相对路径 `.claude/...`），也没说**加载顺序**（先读配置再加载参考文件）。
-
-### 修改内容
-
-#### acm/SKILL.md
-
-1. **Startup 段**（L12）：
-   - 改前：`Read .claude/acm-trainer.local.md if it exists.`
-   - 改后：明确指定**项目根目录**，找不到用 Glob **只在项目内**搜，明确禁止去 `~/.claude/` 和插件缓存搜。加了"先读配置再加载参考文件"的顺序约束。
-   - **为什么这样写**：模型看到相对路径会基于"当前工作目录"解释，但 `.claude/` 在 home 目录和项目目录各有一套，容易混淆。必须显式写 "project root / current working directory"。
-
-2. **Scenario Routing 段**（L97）：
-   - 加了简单问题直接回答的规则：单概念问题（"这个函数干什么""为什么不编译"）不加载任何 reference。
-   - **边界判断**：reference 只用于"系统性工作流"（完整 bug scan、hack 生成、算法深讲、题解走查），简单问答直接用 skill 正文的知识回答。
-
-#### acm-setup/SKILL.md
-
-3. **新增 Step 13**（L232 之后）：
-   - 初始化最后一步询问用户是否自动配置项目权限。
-   - 用 AskUserQuestion 弹窗，默认选"是"。
-   - 如果选是：读取或创建 `.claude/settings.local.json`，**合并**（不覆盖）`additionalDirectories` + `allow` 规则。
-   - **合并逻辑**：必须先读现有文件，把新规则和已有规则合并后再写。如果文件是新建的，同时加到 `.gitignore`。
-   - 权限内容：`additionalDirectories` 加项目目录，`allow` 加 `Bash(ls *)`、`Bash(dir *)`、`Glob(**/*)`。
-
-### 下次修改注意事项
-
-- **acm/SKILL.md 的 Startup 段**：任何路径引用必须写清楚绝对锚点（"project root / current working directory"），靠相对路径会被模型猜错。
-- **参考文件加载**：如果加了新的 reference，确保 Scenario Routing 里只对"重"场景触发。简单问答不应加载 reference。
-- **acm-setup Step 编号**：如果增减步骤，检查 acm-config 中对 acm-setup 步骤号的引用是否断裂。
-- **权限合并逻辑**：Step 13 的 JSON 合并是追加式，不要覆盖已有权限。如果要改权限内容，保持同样的合并策略。
+日期 | 版本 | 变更 | 详情
+2026-05-09 | 0.2.3 | acm: 删Startup段Glob备选方案 | .claude-plugin/changelog/0.2.3.md
+2026-05-09 | 0.2.2 | acm: 明确路径+启动顺序+跳过参考；acm-setup: Step13权限 | .claude-plugin/changelog/0.2.2.md
+2026-05-07 | 0.2.1 | 新增auto_edit_code；配置版本字段；创建本指南 | —
+2026-05-06 | 0.2.0 | 初始版本：三技能+基础配置 | —

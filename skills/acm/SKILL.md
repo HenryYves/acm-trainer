@@ -9,7 +9,7 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 
 ## Startup
 
-**First**, read `.claude/acm-trainer.local.md` in the project root (the current working directory). If the file is not there, search with Glob for `**/acm-trainer.local.md` within the working directory — do NOT search outside the project (not in `~/.claude/`, not in plugin cache). Parse its YAML frontmatter for the fields listed below. **For each field, use the documented default if the field is missing** (old configs may lack newer fields):
+**First**, use Read to read `.claude/acm-trainer.local.md` in the project root (current working directory). This file is always at this exact path after setup — do NOT search for it, do NOT use Glob. If the Read fails (file doesn't exist), stop and tell the user to run `/acm-trainer:acm-setup` first. Parse its YAML frontmatter for the fields listed below. **For each field, use the documented default if the field is missing** (old configs may lack newer fields):
 
 **After config is parsed**, route to the appropriate reference file per Scenario Routing below. Do NOT pre-load reference files (references/*.md) before the config is read — loading them early wastes tokens if the scenario doesn't need them.
 

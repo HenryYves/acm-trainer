@@ -50,6 +50,9 @@
 ```
 acm-trainer/
 ├── .claude-plugin/
+│   ├── MODIFICATION.md         # 修改指南（AI向，人类勿读）
+│   ├── changelog/              # 修改详情（AI向，人类勿读）
+│   │   └── 0.2.2.md ...        # 按需读，一个版本一个文件
 │   ├── marketplace.json
 │   └── plugin.json
 ├── skills/
@@ -57,8 +60,11 @@ acm-trainer/
 │   │   └── references/    # 详细工作流（按需加载以节省token）
 │   ├── acm-setup/          # 初始化向导
 │   └── acm-config/         # 配置管理
-└── README.md
+├── README.md
+└── README-EN.md
 ```
+
+> `.claude-plugin/MODIFICATION.md` 和 `changelog/*.md` 是给 skill-creator (AI) 读的，格式为省 token 优化过（扁平列表、箭头、无装饰），不适合人类阅读。
 
 ## ⚙️ 配置
 
