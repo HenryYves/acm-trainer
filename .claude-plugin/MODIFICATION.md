@@ -1,5 +1,9 @@
 # acm-trainer 修改指南
 
+> **本文件给 skill-creator 用**：记录每次改了什么、为什么这样改、踩了什么坑。下次 skill-creator 改这个插件时先读一遍，少耗 token，别重蹈覆辙。
+
+**⚠️ 修改完别忘了改版本号**：`.claude-plugin/plugin.json` → `"version"` 字段。这是最容易被遗忘的一步。
+
 当通过 `/plugin-dev:create-plugin` 或直接编辑修改本插件时，**必须参考本文件**。每次修改后**更新本文件的更新历史**。
 
 ---
@@ -115,6 +119,55 @@ README.md / README-EN.md
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
-| 2026-05-09 | 0.2.2 | acm: 明确配置路径在项目根目录、加启动加载顺序规则避免过早加载参考文件、简单问题跳过参考文件；acm-setup: 新增 Step 13 询问是否自动配置项目权限 |
+| 2026-05-09 | 0.2.2 | acm: 明确配置路径在项目根目录、启动加载顺序规则、简单问题跳过参考文件；acm-setup: 新增 Step 13 自动配置权限 | → 详见下方 § 0.2.2 修正详情 |
 | 2026-05-07 | 0.2.1 | 新增 `auto_edit_code` 配置项；配置新增 `config_version`/`last_modified` 字段；acm 添加所有字段的回退默认值；创建本修改指南 |
 | 2026-05-06 | 0.2.0 | 初始版本：acm/acm-setup/acm-config 三个技能，code_location/progressive_hints/terminology/solution_language/time_limit_baseline/template 配置 |
+
+---
+
+## 0.2.2 修正详情（2026-05-09）
+
+### 触发背景
+
+用户报告 acm skill 每次使用都有两个痛点：
+1. **启动时搜索配置浪费 token**：skill 说 `Read .claude/acm-trainer.local.md` 但没指定路径，模型会猜 `~/.claude/`、搜插件缓存目录、Glob 全局搜索……实际配置就在项目根目录的 `.claude/` 下。一次简单的"参数写反了"问题产生了 **37,821 个未命中缓存 token，占费用的 88%（~0.11元）**。
+2. **每次读配置文件都弹授权**：Read/Glob/Bash 操作需要逐次确认，打断流程。
+
+### 问题诊断（实测 token 分布）
+
+| 内容 | 是否必要 | 问题 |
+|------|---------|------|
+| code-review.md (125行) | **不需要** | 简单问题"这个函数参数什么意思"触发了完整 bug scan 流程 |
+| 两次 Glob + 一次 Bash ls | **不需要** | 配置路径模糊导致反复搜索 |
+| acm-trainer.local.md | 必要 | 但被读了两次（先猜错路径失败，再搜索后读到） |
+
+**根因**：skill 没说清楚配置的**绝对位置**（只写了相对路径 `.claude/...`），也没说**加载顺序**（先读配置再加载参考文件）。
+
+### 修改内容
+
+#### acm/SKILL.md
+
+1. **Startup 段**（L12）：
+   - 改前：`Read .claude/acm-trainer.local.md if it exists.`
+   - 改后：明确指定**项目根目录**，找不到用 Glob **只在项目内**搜，明确禁止去 `~/.claude/` 和插件缓存搜。加了"先读配置再加载参考文件"的顺序约束。
+   - **为什么这样写**：模型看到相对路径会基于"当前工作目录"解释，但 `.claude/` 在 home 目录和项目目录各有一套，容易混淆。必须显式写 "project root / current working directory"。
+
+2. **Scenario Routing 段**（L97）：
+   - 加了简单问题直接回答的规则：单概念问题（"这个函数干什么""为什么不编译"）不加载任何 reference。
+   - **边界判断**：reference 只用于"系统性工作流"（完整 bug scan、hack 生成、算法深讲、题解走查），简单问答直接用 skill 正文的知识回答。
+
+#### acm-setup/SKILL.md
+
+3. **新增 Step 13**（L232 之后）：
+   - 初始化最后一步询问用户是否自动配置项目权限。
+   - 用 AskUserQuestion 弹窗，默认选"是"。
+   - 如果选是：读取或创建 `.claude/settings.local.json`，**合并**（不覆盖）`additionalDirectories` + `allow` 规则。
+   - **合并逻辑**：必须先读现有文件，把新规则和已有规则合并后再写。如果文件是新建的，同时加到 `.gitignore`。
+   - 权限内容：`additionalDirectories` 加项目目录，`allow` 加 `Bash(ls *)`、`Bash(dir *)`、`Glob(**/*)`。
+
+### 下次修改注意事项
+
+- **acm/SKILL.md 的 Startup 段**：任何路径引用必须写清楚绝对锚点（"project root / current working directory"），靠相对路径会被模型猜错。
+- **参考文件加载**：如果加了新的 reference，确保 Scenario Routing 里只对"重"场景触发。简单问答不应加载 reference。
+- **acm-setup Step 编号**：如果增减步骤，检查 acm-config 中对 acm-setup 步骤号的引用是否断裂。
+- **权限合并逻辑**：Step 13 的 JSON 合并是追加式，不要覆盖已有权限。如果要改权限内容，保持同样的合并策略。
