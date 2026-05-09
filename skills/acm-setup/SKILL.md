@@ -232,3 +232,43 @@ Write the file with Write tool. Do NOT use Bash for file creation.
 Confirm: "配置已保存到 `.claude/acm-trainer.local.md`。可以试试发一道算法题来测试。"
 
 Also remind: "以后想改配置，用 `/acm-trainer:acm-config`。"
+
+## Step 13: Auto-Configure Permissions
+
+Reduce permission prompts by adding the project directory to `.claude/settings.local.json`. This lets Read/Glob/Bash-ls in the project run without auth — meaning config reads and code file lookups won't interrupt with permission dialogs.
+
+AskUserQuestion:
+- header: "权限配置"
+- question: "是否自动配置项目权限？选"是"会将项目目录加入 settings.local.json，之后读取代码文件、搜索配置不会再弹出授权提示。（不会影响其他项目）"
+- multiSelect: false
+- options:
+  - "是，自动配置" — 自动把项目目录加入权限白名单
+  - "不用了" — 跳过，保留默认权限设置
+
+If user chooses "不用了", skip to done.
+
+**If user chooses "是，自动配置":**
+
+1. Read `.claude/settings.local.json` in the project root (current working directory). If it doesn't exist, start with `{}`.
+2. Parse existing JSON. Merge the following into it (preserve all existing settings):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls *)",
+      "Bash(dir *)",
+      "Glob(**/*)"
+    ],
+    "additionalDirectories": [
+      "<current working directory with backslashes escaped>"
+    ]
+  }
+}
+```
+
+3. If existing `permissions.allow` already has entries, merge — do NOT replace. If existing `permissions.additionalDirectories` already has entries, merge — do NOT replace.
+4. Write the merged result back to `.claude/settings.local.json` with the Write tool.
+5. Confirm: "项目权限已配置。之后 acm 读代码、查配置不会弹授权了。"
+
+If `.claude/settings.local.json` was newly created (didn't exist before), also add it to `.gitignore` if one exists and the entry isn't there yet.

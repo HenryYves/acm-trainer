@@ -115,5 +115,6 @@ README.md / README-EN.md
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-09 | 0.2.2 | acm: 明确配置路径在项目根目录、加启动加载顺序规则避免过早加载参考文件、简单问题跳过参考文件；acm-setup: 新增 Step 13 询问是否自动配置项目权限 |
 | 2026-05-07 | 0.2.1 | 新增 `auto_edit_code` 配置项；配置新增 `config_version`/`last_modified` 字段；acm 添加所有字段的回退默认值；创建本修改指南 |
 | 2026-05-06 | 0.2.0 | 初始版本：acm/acm-setup/acm-config 三个技能，code_location/progressive_hints/terminology/solution_language/time_limit_baseline/template 配置 |

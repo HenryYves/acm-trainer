@@ -9,7 +9,9 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 
 ## Startup
 
-Read `.claude/acm-trainer.local.md` if it exists. Parse YAML frontmatter for the fields listed below. **For each field, use the documented default if the field is missing** (old configs may lack newer fields):
+**First**, read `.claude/acm-trainer.local.md` in the project root (the current working directory). If the file is not there, search with Glob for `**/acm-trainer.local.md` within the working directory — do NOT search outside the project (not in `~/.claude/`, not in plugin cache). Parse its YAML frontmatter for the fields listed below. **For each field, use the documented default if the field is missing** (old configs may lack newer fields):
+
+**After config is parsed**, route to the appropriate reference file per Scenario Routing below. Do NOT pre-load reference files (references/*.md) before the config is read — loading them early wastes tokens if the scenario doesn't need them.
 
 - `code_location_mode` / `code_paths` — where user code files are (`none`, `single`, `per_problem`, `files`). Default: `code_location_mode: none`.
 - `progressive_hints` — whether to default to progressive hints. Default: `true`.
@@ -95,7 +97,7 @@ After reading config and understanding the user's request, route to the appropri
 - **User asks to analyze complexity** → read `references/workflows.md` for complexity analysis.
 - **User shares code for review** → read `references/code-review.md` for the full bug scan + hack generation workflow.
 
-Read only the reference file needed, not all of them.
+Read only the reference file needed, not all of them. For simple, single-concept questions (e.g., "this function does what?", "why doesn't this compile?", "what does this parameter mean?") — answer directly without loading any reference file. References are for systematic workflows: full bug scans, hack generation, algorithm deep-dives, and problem-solving walkthroughs.
 
 ## Output Format
 
