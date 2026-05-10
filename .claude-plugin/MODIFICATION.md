@@ -1,5 +1,5 @@
 # acm-trainer 修改指南
-> 导航索引。skill-creator/模型读此文件后按路径找目标，不搜索。
+> 导航索引。skill-creator、plugin-dev:create-plugin 及其他修改本插件的 skill/模型读此文件后按路径找目标，不搜索。
 > 改完改版本号：.claude-plugin/plugin.json → version
 
 ## 文件清单
@@ -67,7 +67,7 @@ per_problem_constants|list  | []          | Step 6a | Template-Aware Review
 terminology         | enum   | mixed       | Step 7  | Language Rules
 solution_language   | enum   | cpp         | Step 8  | Solution Language
 time_limit_baseline | int    | 100000000   | Step 9  | Complexity Analysis
-config_version      | string | "0.2.0"     | Step 11 | 迁移检查
+config_version      | string | "0.2.4"     | Step 11 | 迁移检查
 last_modified       | date   | ""          | Step 11 | 迁移检查
 
 ## 版本管理
@@ -82,9 +82,11 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 - 路径必须写锚点：相对路径被模型猜错，写"project root / current working directory"。(v0.2.2)
 - 参考文件按需加载：Scenario Routing只对"重"场景触发reference，简单问答用skill正文。(v0.2.2)
 - 权限合并是追加式：acm-setup Step13不覆盖已有.claude/settings.local.json。(v0.2.2)
+- config_version同步升级：改acm-setup Step11的YAML字段时，必须同步bump config_version，且acm/SKILL.md和acm-config/SKILL.md的版本检查阈值一起更新。4处硬编码保持一致。(v0.2.4)
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-05-10 | 0.2.4 | acm: Code Location段禁搜索; acm-config: 拆Step2+权限选项 | .claude-plugin/changelog/0.2.4.md
 2026-05-09 | 0.2.3 | acm: 删Startup段Glob备选方案 | .claude-plugin/changelog/0.2.3.md
 2026-05-09 | 0.2.2 | acm: 明确路径+启动顺序+跳过参考；acm-setup: Step13权限 | .claude-plugin/changelog/0.2.2.md
 2026-05-07 | 0.2.1 | 新增auto_edit_code；配置版本字段；创建本指南 | —

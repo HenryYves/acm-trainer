@@ -199,7 +199,7 @@ auto_edit_code: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
-config_version: "0.2.0"
+config_version: "0.2.4"
 last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>
 template_path: "<path or empty>"

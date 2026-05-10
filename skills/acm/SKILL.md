@@ -21,12 +21,12 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 - `has_template` / `template_path` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`.
 - `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
 - `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
-- `config_version` — config schema version (for migration checks). Default: `"0.1.0"` (intentionally low to trigger migration prompt for old configs).
+- `config_version` — config schema version (for migration checks). Default: `"0.2.4"`.
 - `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
-If `config_version` is missing or older than `"0.2.0"`, mention: "检测到旧版配置文件（缺少部分新设置项），可运行 `/acm-trainer:acm-setup` 更新。" but continue with defaults for missing fields.
+If `config_version` is missing or older than `"0.2.4"`, mention: "检测到旧版配置文件（版本: <current>，最新: 0.2.4），可运行 `/acm-trainer:acm-setup` 更新。" but continue with defaults for missing fields.
 
 > **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
 
@@ -65,17 +65,19 @@ First line of response must be a one-sentence insight: what the correct approach
 
 ## Code Location
 
+**The paths in `code_paths` are the exact file locations — use Read directly with the path from config. No lookup or verification is needed; the path is already known.**
+
 Based on `code_location_mode`:
 
-**`none`**: Expect the user to paste code directly. No file lookup.
+**`none`**: Expect the user to paste code directly. No file to read.
 
-**`single`**: The user has one fixed file for all problems (e.g., `my.cpp`). When the user says "看我代码" or "看看my", read the file at `code_paths.default`.
+**`single`**: The user has one fixed file for all problems. When the user says "看我代码" or "看看my", Read `code_paths.default` directly.
 
-**`per_problem`**: The user stores one file per problem in a directory (`code_paths.default`). When the user says "看A" or "读B", look for `A.cpp` or `B.cpp` in that directory. Also try common extensions (`.cpp`, `.py`) if the bare filename isn't found. If the user doesn't specify which file, ask: "要看哪个题的文件？"
+**`per_problem`**: The user stores one file per problem in a directory (`code_paths.default`). When the user says "看A" or "读B", construct the filename (e.g., `A.cpp`) and Read it from that directory. If the user doesn't specify which file, ask: "要看哪个题的文件？"
 
-**`files`**: The user has multiple named files with keyword mapping. When the user says "看A" or "cf的C题", match the keyword to the path in `code_paths`. Read the corresponding file.
+**`files`**: The user has multiple named files with keyword mapping. When the user says "看A" or "my", find the keyword in `code_paths` and Read that exact absolute path directly — it is right there in the config.
 
-If the user refers to a file by path directly, always use that path regardless of config.
+If the user refers to a file by path directly, Read that path.
 
 ## Template-Aware Code Review
 
@@ -113,7 +115,7 @@ Read only the reference file needed, not all of them. For simple, single-concept
 | 贴了题目 + N, M 约束 | Read `references/workflows.md`, problem-solving section |
 | "讲讲XXX算法" | Read `references/workflows.md`, algorithm explanation section |
 | "帮我看看代码" / "哪里WA了" | Read `references/code-review.md` |
-| "看A" / "读B" / "看我代码" | Look up file via `code_paths` based on `code_location_mode` |
+| "看A" / "读B" / "看我代码" | Read the file at the exact path from `code_paths` based on `code_location_mode` |
 | "分析复杂度" / "会TLE吗" | Read `references/workflows.md`, complexity section |
 | "直接给答案" | Skip progressive hints, give full solution |
 | "给提示就行" | Enable progressive hints for this query |
