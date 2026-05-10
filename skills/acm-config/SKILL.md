@@ -18,7 +18,7 @@ Read `.claude/acm-trainer.local.md`.
 
 ```
 === ACM Trainer 当前配置 ===
-配置版本: <config_version>（最新: 0.2.4）
+配置版本: <config_version>（最新配置格式: 0.2.4）
 最后修改: <last_modified>
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
@@ -28,12 +28,49 @@ Read `.claude/acm-trainer.local.md`.
 模板代码: <路径 or 无>
 变值常量: <无 or 常量名列表>
 评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom>
+版本更新提醒: <是/否>
 =========================
 ```
 
-**Version check**: The latest config schema version is `0.2.4`. If the user's `config_version` is missing or older than `0.2.4`, warn: "检测到旧版配置文件（版本: <current>，最新: 0.2.4）。可运行 `/acm-trainer:acm-setup` 更新配置。" If `0.2.4` or newer, no warning.
+**Version check**: The latest config schema version is `0.2.4`.
 
-Then proceed to Step 2.
+If `config_version` is `"0.2.4"` or newer → no action, proceed to Step 2.
+
+If `config_version` is missing or older than `"0.2.4"`:
+
+1. Compare the parsed config against the complete field list (with defaults from acm-setup):
+
+   | Field | Setup Step | Default |
+   |-------|-----------|---------|
+   | `code_location_mode` | Step 2 | `none` |
+   | `code_paths` | Step 2 | `{}` |
+   | `progressive_hints` | Step 3 | `true` |
+   | `auto_edit_code` | Step 4 | `false` |
+   | `terminology` | Step 7 | `mixed` |
+   | `solution_language` | Step 8 | `cpp` |
+   | `time_limit_baseline` | Step 9 | `100000000` |
+   | `has_template` | Step 5 | `false` |
+   | `remind_config_update` | — | `true` |
+
+   (`template_path`, `template_boundary`, `template_entry`, `per_problem_constants` 只在 `has_template: true` 时有意义；如果 `has_template` 为 true 但这些字段缺失，引导用户用 Step 2 的"重新分析模板"补全，不在版本升级中处理。)
+
+2. 找出用户配置中**缺失的字段**。忽略 `config_version`、`last_modified`（总是自动更新）。如果 `code_location_mode` 为 `none`，也忽略 `code_paths`。
+
+3. **如果没有任何字段缺失**（只是版本号旧）：直接更新 `config_version` → `"0.2.4"`，`last_modified` → 今天日期。提示"配置内容已是最新，仅升级版本号。"然后进入 Step 2。
+
+4. **如果有字段缺失**：列出缺失字段及用途。然后 AskUserQuestion：
+   - header: "配置升级"
+   - question: "检测到旧版配置（版本: <current>）。以下 N 个配置项尚未设置：[列出缺失字段名 + 一句话用途]。是否逐项配置？"
+   - multiSelect: false
+   - options:
+     - "是，逐项配置" — 对每个缺失字段，用 acm-setup 对应步骤的问题引导选择（不重新走完整 setup，只问缺失的字段）
+     - "跳过" — 保留当前配置不变，版本号不升级（下次仍会提示）
+
+5. 如果选"是，逐项配置"：按 setup 步骤顺序，对每个缺失字段用对应的 AskUserQuestion 让用户选择。全部配置完后，写入配置文件：保留原有字段值 + 新字段值，`config_version` → `"0.2.4"`，`last_modified` → 今天日期。
+
+6. 如果选"跳过"：不修改配置，继续 Step 2。
+
+然后进入 Step 2。
 
 ## Step 2: Choose What to Change
 
@@ -64,13 +101,14 @@ AskUserQuestion:
 **Batch 3:**
 AskUserQuestion:
 - header: "修改配置 (3/3)"
-- question: "模板相关？（继续）"
+- question: "其他配置项？（继续）"
 - multiSelect: true
 - options:
+  - "版本更新提醒" — 切换是否在配置版本落后时提醒（当前: <remind_config_update>）
   - "变值常量" — 修改每题需要调整的常量列表（仅在已配置模板时显示）
-  - "以上都没有" — 不需要修改模板相关配置
+  - "以上都没有" — 不需要修改
 
-If the user has no template configured (`has_template: false`), skip Batch 3 — 变值常量 requires a template.
+If the user has no template configured (`has_template: false`), hide "变值常量" option.
 
 After all batches, if the user selected nothing across all batches (or only "以上都没有"), say "没有改动。" and exit.
 
@@ -86,7 +124,9 @@ For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + S
 
 For "评测机速度": use the same options as acm-setup Step 9. Update `time_limit_baseline`.
 
-For "权限配置": ask the user to confirm (same as acm-setup Step 13):
+For "版本更新提醒": AskUserQuestion — header: "版本提醒", question: "是否在配置版本落后时提醒更新？", options: "是，提醒我" (set `true`) / "不用提醒" (set `false`). Update `remind_config_update`.
+
+For "权限配置": ask the user to confirm. Same logic as acm-setup Step 13 but also configurable here independently. Adds both the project directory and the plugin cache root directory (so acm skill can read its `references/*.md` files without prompts).
 
 AskUserQuestion:
 - header: "权限配置"
@@ -105,17 +145,21 @@ If "是，自动配置":
   "permissions": {
     "allow": [
       "Bash(ls *)",
-      "Bash(dir *)"
+      "Bash(dir *)",
+      "Glob(**/*)"
     ],
     "additionalDirectories": [
-      "<current working directory with backslashes escaped>"
+      "<current working directory with backslashes escaped>",
+      "<plugin cache root with backslashes escaped>"
     ]
   }
 }
 ```
 
+The plugin cache root is the `acm-trainer` directory — go up 3 levels from this skill file's directory (`<version>/skills/acm-config/`) to reach it. For a typical install: `~/.claude/plugins/cache/Yves-plugin/acm-trainer/`.
+
 3. Write the merged result back with the Write tool.
-4. Confirm: "项目权限已配置。之后 acm 读代码、查配置不会弹授权了。"
+4. Confirm: "项目及插件权限已配置。之后 acm 读代码、读 reference 文件、查配置不会弹授权了。"
 
 If `.claude/settings.local.json` was newly created, also add it to `.gitignore` if one exists and the entry isn't there yet.
 

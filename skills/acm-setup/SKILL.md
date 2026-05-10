@@ -13,7 +13,7 @@ Deterministic setup wizard for the ACM trainer plugin. Collects user preferences
 Read `.claude/acm-trainer.local.md` if it exists.
 
 - **Config does not exist** → proceed to Step 2 (full setup).
-- **Config exists** → show a brief summary of current settings. Ask: "配置已存在，是否重新初始化？（这将覆盖当前配置）" If user confirms, proceed to Step 2. Otherwise exit.
+- **Config exists** → show a brief summary of current settings. If `config_version` is old, mention: "检测到旧版配置，可运行 `/acm-trainer:acm-config` 补全配置。" Then ask: "是否完全重新初始化？（这将覆盖当前配置）" If user confirms, proceed to Step 2. Otherwise exit. (Config updates are handled by `/acm-trainer:acm-config`, not setup.)
 
 ## Step 2: Code Location
 
@@ -200,6 +200,7 @@ terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
 config_version: "0.2.4"
+remind_config_update: true
 last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>
 template_path: "<path or empty>"
@@ -235,7 +236,10 @@ Also remind: "以后想改配置，用 `/acm-trainer:acm-config`。"
 
 ## Step 13: Auto-Configure Permissions
 
-Reduce permission prompts by adding the project directory to `.claude/settings.local.json`. This lets Read/Glob/Bash-ls in the project run without auth — meaning config reads and code file lookups won't interrupt with permission dialogs.
+Reduce permission prompts by adding trusted directories to `.claude/settings.local.json`. Two directories need access:
+
+1. **项目目录** — so config reads and code file lookups don't trigger permission prompts.
+2. **插件缓存根目录** — so the acm skill can read its own reference files (`workflows.md`, `code-review.md`) without prompts. This skill file lives inside the plugin cache at `<root>/<version>/skills/acm-setup/SKILL.md`. Go up 3 levels from this skill file's directory to reach the plugin cache root (the `acm-trainer` directory). For a typical install: `~/.claude/plugins/cache/Yves-plugin/acm-trainer/` (Windows: `%USERPROFILE%\.claude\plugins\cache\Yves-plugin\acm-trainer\`).
 
 AskUserQuestion:
 - header: "权限配置"
@@ -261,7 +265,8 @@ If user chooses "不用了", skip to done.
       "Glob(**/*)"
     ],
     "additionalDirectories": [
-      "<current working directory with backslashes escaped>"
+      "<current working directory with backslashes escaped>",
+      "<plugin cache root with backslashes escaped>"
     ]
   }
 }
@@ -269,6 +274,6 @@ If user chooses "不用了", skip to done.
 
 3. If existing `permissions.allow` already has entries, merge — do NOT replace. If existing `permissions.additionalDirectories` already has entries, merge — do NOT replace.
 4. Write the merged result back to `.claude/settings.local.json` with the Write tool.
-5. Confirm: "项目权限已配置。之后 acm 读代码、查配置不会弹授权了。"
+5. Confirm: "项目及插件权限已配置。之后 acm 读代码、读 reference 文件、查配置不会弹授权了。"
 
 If `.claude/settings.local.json` was newly created (didn't exist before), also add it to `.gitignore` if one exists and the entry isn't there yet.

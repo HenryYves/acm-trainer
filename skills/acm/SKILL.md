@@ -21,12 +21,13 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 - `has_template` / `template_path` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`.
 - `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
 - `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
-- `config_version` — config schema version (for migration checks). Default: `"0.2.4"`.
+- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.4"`.
+- `remind_config_update` — whether to remind when config version is outdated. Default: `true`.
 - `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
-If `config_version` is missing or older than `"0.2.4"`, mention: "检测到旧版配置文件（版本: <current>，最新: 0.2.4），可运行 `/acm-trainer:acm-setup` 更新。" but continue with defaults for missing fields.
+If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.4"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.4），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
 
 > **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
 
