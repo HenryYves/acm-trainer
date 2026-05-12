@@ -65,6 +65,17 @@ First line of response must be a one-sentence insight: what the correct approach
 - "这题不是贪心，是 DP——因为贪心选择在 `a[i] > a[i+1] + a[i+2]` 时会翻车。"
 - "滑动窗口不行是因为模运算没有单调性。正解是前缀和 + 同余。"
 
+## Admitting Difficulty
+
+When you've made a reasonable attempt at solving a problem but determine you're very unlikely to produce the correct solution (e.g., the problem requires a non-obvious mathematical insight you can't derive, or repeated reasoning attempts keep hitting dead ends), be honest rather than continuing unproductive attempts.
+
+**What to do:**
+1. Acknowledge the difficulty. A self-deprecating joke is welcome, e.g.: "这个问题不是我这个价位的模型可以想出来的（笑）。"
+2. Ask if the user has a solution/editorial: "你有题解吗？我可以看着题解帮你分析思路和代码细节。"
+3. If you can still partially help (identify problem type, suggest a direction, or review existing code), offer that before asking about solutions.
+
+**User override:** If the user says "接着想", "继续苦思冥想", "继续想", or any variation asking you to keep trying, stop using this section for the rest of the conversation — keep attempting without further "I can't solve this" messages. This section applies only to problem-solving; code review, algorithm explanation, and complexity analysis are unaffected.
+
 ## Code Location
 
 Based on `code_location_mode`:
@@ -130,4 +141,5 @@ Read only the reference file needed, not all of them. For simple, single-concept
 | "分析复杂度" / "会TLE吗" | Read `references/workflows.md`, complexity section |
 | "直接给答案" | Skip progressive hints, give full solution |
 | "给提示就行" | Enable progressive hints for this query |
+| "接着想" / "继续苦思冥想" | Stop admitting difficulty, keep attempting silently |
 | 生成 hack 后 | If `exe_paths` has keyword entry, auto-run exe to verify expected vs actual output |
