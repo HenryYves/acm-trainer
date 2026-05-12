@@ -23,6 +23,7 @@ Read `.claude/acm-trainer.local.md`.
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
 自动修改代码: <允许/不允许>
+收录题解: <手动/自动>
 术语风格: <pure_chinese/mixed>
 编程语言: <cpp/py/match_code>
 模板代码: <有/无>
@@ -47,6 +48,7 @@ If `config_version` is missing or older than `"0.2.6"`:
    | `code_paths` | Step 2 | `{}` |
    | `progressive_hints` | Step 3 | `true` |
    | `auto_edit_code` | Step 4 | `false` |
+   | `auto_collect_solution` | Step 4b | `false` |
    | `terminology` | Step 7 | `mixed` |
    | `solution_language` | Step 8 | `cpp` |
    | `time_limit_baseline` | Step 9 | `100000000` |
@@ -86,6 +88,7 @@ Present all options in a **single** `AskUserQuestion` call with 3 questions. The
   - "引导方式" — 切换渐进式引导开关
   - "自动修改代码" — 切换代码审查时直接修改文件
   - "术语风格" — 切换纯中文 / 保留英文缩写
+  - "收录题解" — 切换手动/自动收录题解到本地知识库
 
 **Question 2:**
 - header: "修改配置 (2/3)"
@@ -120,6 +123,8 @@ For each selected item, ask the new value using AskUserQuestion. Use the same op
 For "变值常量": present the full list of candidates from the template (re-scan the template file), let user toggle which ones vary. This replaces the existing `per_problem_constants` list.
 
 For "自动修改代码": ask with the same question as acm-setup Step 4. Toggle `auto_edit_code`.
+
+For "收录题解": ask with the same question as acm-setup Step 4b. Toggle `auto_collect_solution`.
 
 For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + Step 6a of acm-setup), including per-problem constant confirmation.
 

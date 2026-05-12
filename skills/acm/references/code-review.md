@@ -15,6 +15,23 @@
 
 Only output the complete file when the user explicitly says "给我完整代码".
 
+## Constraint-Based Viability Check
+
+Before diving into detailed bug scanning, check whether the code is fundamentally viable given the problem constraints. This catches catastrophic issues even when the correct solution isn't obvious.
+
+### Space Complexity Check
+- Compare the code's memory usage against constraints. If `n,m ≤ 1e9`, any `vector<T>(n)` or `vector<T>(m)` is immediately invalid — flag it as **Fatal**.
+- `vector<vector<T>>(n, vector<T>(m))` with n,m ≤ 1e9 would need exabytes. An O(n) or O(m) space allocation when n,m are at 1e9 scale is a showstopper.
+
+### Time Complexity Check
+- Estimate the code's time complexity from its loop structure. Compare against the constraint-implied viable complexity (see workflows.md Safe N table).
+- Example: nested loops over n (n ≤ 1e9) → O(n²) → immediately TLE. Flag even if the logic seems correct.
+
+### Per-Problem Constant Check
+- If config has `per_problem_constants`, verify each against the problem's actual constraints. Flag any that are too small.
+
+Report these as **Fatal** before the detailed bug scan — they mean the approach needs fundamental rethinking, not just bug fixes. Even when the correct solution is unclear, pointing out "your O(n) space allocation with n=1e9 is impossible" is valuable feedback.
+
 ## Template-Aware Review
 
 If user config has `has_template: true`, apply these rules:

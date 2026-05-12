@@ -24,6 +24,7 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 - `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
 - `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.6"`.
 - `remind_config_update` — whether to remind when config version is outdated. Default: `true`.
+- `auto_collect_solution` — whether to auto-save solution when user provides an editorial/solution. Default: `false`.
 - `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
@@ -67,14 +68,62 @@ First line of response must be a one-sentence insight: what the correct approach
 
 ## Admitting Difficulty
 
-When you've made a reasonable attempt at solving a problem but determine you're very unlikely to produce the correct solution (e.g., the problem requires a non-obvious mathematical insight you can't derive, or repeated reasoning attempts keep hitting dead ends), be honest rather than continuing unproductive attempts.
+When you've made a reasonable attempt (~3 rounds of reasoning) but keep hitting dead ends or cycling through the same ideas without finding a viable direction, be honest rather than continuing unproductive attempts.
 
 **What to do:**
-1. Acknowledge the difficulty. A self-deprecating joke is welcome, e.g.: "这个问题不是我这个价位的模型可以想出来的（笑）。"
+1. Acknowledge the difficulty. A self-deprecating joke is welcome (make it about yourself, not the user), e.g.: "这题好像不是我这种价位的模型能想出来的……（苦笑）"
 2. Ask if the user has a solution/editorial: "你有题解吗？我可以看着题解帮你分析思路和代码细节。"
 3. If you can still partially help (identify problem type, suggest a direction, or review existing code), offer that before asking about solutions.
 
 **User override:** If the user says "接着想", "继续苦思冥想", "继续想", or any variation asking you to keep trying, stop using this section for the rest of the conversation — keep attempting without further "I can't solve this" messages. This section applies only to problem-solving; code review, algorithm explanation, and complexity analysis are unaffected.
+
+## Solution Collection
+
+Users can manually save problem solutions/editorials. The skill maintains a two-level lookup system under `.claude/acm-trainer/solutions/`:
+
+**Index file** (`index.md`): One table row per collected problem — tags, problem name, detail file path. Scan this first (low token cost) to know if a relevant solution exists.
+
+**Detail files** (`details/<slug>.md`): One file per problem. YAML frontmatter with `problem`, `tags`, `constraints`, `complexity`; body with core insight, algorithm steps, and code skeleton in the configured `solution_language`.
+
+### Detail file format
+
+Each detail file should include a **"如何想到"** section — a reasoning guide for similar problems: given these constraints/signals, what clues point to this approach? This is the most valuable part for future reference.
+
+```markdown
+---
+problem: <name>
+tags: [<tag list>]
+constraints: <key constraints summary>
+complexity: <time/space>
+---
+
+## 如何想到
+- 线索1: <constraint/signal> → <what it implies>
+- 线索2: ...
+## 核心思路
+...
+## 算法步骤
+...
+## 代码骨架
+  ````cpp
+  ...
+  ````
+```
+
+### Saving a solution
+
+Triggered by: "收录这道题", "记录题解", "收藏一下", "保存这个思路", etc. Also, if config `auto_collect_solution` is `true` and the user provides a solution/editorial, automatically trigger collection.
+
+1. **Duplicate check first**: scan `index.md` for the same problem name or very similar tag+constraint combination. If already collected, say "这道题好像已经收录过了" and skip.
+2. Summarize the solution — extract the key insight, algorithm, complexity, and a minimal code skeleton. **Must include the "如何想到" guide** — a chain of reasoning from constraints/signals to the approach.
+3. Pick a descriptive slug (domain-technique style, e.g., `dp-column-obstacle-fastpow`). AI looks up by tags primarily, so the slug is for human browsing.
+4. Write the detail file to `.claude/acm-trainer/solutions/details/<slug>.md`.
+5. Update `index.md` — append a row. If the file doesn't exist, create it with the table header first.
+6. Tags should cover: problem domain (dp, graph, math, greedy, ds, string, geometry), data structures, key constraints (e.g., `column-constraint`, `one-per-column`), and techniques (e.g., `fastpow`, `coordinate-compress`, `contribution`).
+
+### Referencing collected solutions
+
+When solving a new problem, before diving into reasoning, check if `.claude/acm-trainer/solutions/index.md` exists. If it does, scan for matching tags or similar problem patterns. If a match is found, read the detail file to inform your approach. Mention it to the user: "之前在收录的题解里找到一道类似的题……"
 
 ## Code Location
 
@@ -116,7 +165,7 @@ For detailed code review workflow, see `references/code-review.md`.
 
 After reading config and understanding the user's request, route to the appropriate reference:
 
-- **User pastes a problem statement** → read `references/workflows.md` for the problem-solving walkthrough.
+- **User pastes a problem statement** → check `.claude/acm-trainer/solutions/index.md` for relevant collected solutions, then read `references/workflows.md` for the problem-solving walkthrough.
 - **User asks about an algorithm/data structure** → read `references/workflows.md` for the algorithm explanation format.
 - **User asks to analyze complexity** → read `references/workflows.md` for complexity analysis.
 - **User shares code for review** → read `references/code-review.md` for the full bug scan + hack generation workflow.
@@ -142,4 +191,5 @@ Read only the reference file needed, not all of them. For simple, single-concept
 | "直接给答案" | Skip progressive hints, give full solution |
 | "给提示就行" | Enable progressive hints for this query |
 | "接着想" / "继续苦思冥想" | Stop admitting difficulty, keep attempting silently |
+| "收录这道题" / "记录题解" / "收藏一下" | Check duplicate → summarize with 如何想到 → write detail → update index |
 | 生成 hack 后 | If `exe_paths` has keyword entry, auto-run exe to verify expected vs actual output |

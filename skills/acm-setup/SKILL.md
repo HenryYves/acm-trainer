@@ -87,6 +87,18 @@ AskUserQuestion:
   - "不允许（默认）" — 只给出修改建议的文字说明，不主动编辑/创建代码文件
   - "允许" — 发现问题后可以直接用 Edit/Write 修改或创建代码文件
 
+## Step 4b: Solution Collection
+
+AskUserQuestion:
+- header: "收录题解"
+- question: "获得题解或解题思路后，是否自动收录到本地知识库？收录后遇到类似题可查表参考。文件名建议使用"领域-核心技巧"规则（如 dp-column-obstacle），AI 查表主要靠标签而非文件名。"
+- multiSelect: false
+- options:
+  - "手动指定（默认）" — 只有你说"收录"/"记录题解"等关键词时才收录
+  - "自动收录" — 你贴出题解或解题思路时自动收录，重复的自动跳过
+
+Set `auto_collect_solution: false` for "手动指定", `true` for "自动收录".
+
 ## Step 5: Template Code
 
 AskUserQuestion:
@@ -197,6 +209,7 @@ Show a summary of all choices:
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
 自动修改代码: <允许/不允许>
+收录题解: <手动/自动>
 模板代码: <无 / 路径 + 摘要>
 变值常量: <无 / 选中的常量名列表>
 术语风格: <pure_chinese / mixed>
@@ -231,6 +244,7 @@ exe_paths:
   <keyword>: <path>  # optional, for C++ hack verification
 progressive_hints: <true|false>
 auto_edit_code: <true|false>
+auto_collect_solution: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
