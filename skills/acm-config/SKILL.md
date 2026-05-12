@@ -75,10 +75,9 @@ If `config_version` is missing or older than `"0.2.6"`:
 
 ## Step 2: Choose What to Change
 
-Present options in 3 batches (AskUserQuestion max 4 options each). Collect all selections before proceeding to Step 3.
+Present all options in a **single** `AskUserQuestion` call with 3 questions. The user navigates between them with `←` `→` arrow keys and submits once. Collect all selections across all 3 questions before proceeding to Step 3.
 
-**Batch 1:**
-AskUserQuestion:
+**Question 1:**
 - header: "修改配置 (1/3)"
 - question: "想修改哪些项？"
 - multiSelect: true
@@ -88,10 +87,9 @@ AskUserQuestion:
   - "自动修改代码" — 切换代码审查时直接修改文件
   - "术语风格" — 切换纯中文 / 保留英文缩写
 
-**Batch 2:**
-AskUserQuestion:
+**Question 2:**
 - header: "修改配置 (2/3)"
-- question: "想修改哪些项？（继续）"
+- question: "想修改哪些项？"
 - multiSelect: true
 - options:
   - "编程语言" — 切换 C++ / Python / 跟随当前代码
@@ -99,20 +97,21 @@ AskUserQuestion:
   - "权限配置" — 将项目目录加入 settings.local.json，避免 acm 读代码/配置时弹授权提示
   - "重新分析模板" — 重新指定模板文件并分析（含变值常量确认）
 
-**Batch 3:**
-AskUserQuestion:
+**Question 3:**
 - header: "修改配置 (3/3)"
-- question: "其他配置项？（继续）"
+- question: "想修改哪些项？"
 - multiSelect: true
 - options:
   - "版本更新提醒" — 切换是否在配置版本落后时提醒（当前: <remind_config_update>）
   - "可执行文件路径" — 配置/修改 C++ exe 路径，hack 生成后自动跑验证
-  - "变值常量" — 修改每题需要调整的常量列表（仅在已配置模板时显示）
+  - "变值常量" — 修改每题需要调整的常量列表
   - "以上都没有" — 不需要修改
 
-If the user has no template configured (`has_template: false`), hide "变值常量" option.
+If the user has no template configured (`has_template: false`), hide "变值常量" option in Question 3. If that leaves Question 3 with only 3 options, keep it as-is (min 2 is satisfied).
 
-After all batches, if the user selected nothing across all batches (or only "以上都没有"), say "没有改动。" and exit.
+**Important**: Send all 3 questions in a single `AskUserQuestion` call — not 3 separate calls. The user uses `←` `→` to flip between question pages, then submits everything at once.
+
+After receiving answers, merge selections from all 3 questions. If the user selected "以上都没有" in Question 3, ignore all other selections and treat as "no changes". If nothing was selected across all 3 questions, say "没有改动。" and exit.
 
 ## Step 3: Apply Changes
 
