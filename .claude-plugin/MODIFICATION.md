@@ -66,7 +66,8 @@ per_problem_constants|list  | []          | Step 6a | Template-Aware Review
 terminology         | enum   | mixed       | Step 7  | Language Rules
 solution_language   | enum   | cpp         | Step 8  | Solution Language
 time_limit_baseline | int    | 100000000   | Step 9  | Complexity Analysis
-config_version      | string | "0.2.5"     | Step 11 | 迁移检查（仅在配置格式变化时升）
+exe_paths           | map    | {}          | Step 2b | Hack Verification
+config_version      | string | "0.2.6"     | Step 11 | 迁移检查（仅在配置格式变化时升）
 remind_config_update| bool   | true        | Step 11 | 是否在配置版本落后时提醒
 last_modified       | date   | ""          | Step 11 | 迁移检查
 
@@ -89,6 +90,7 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-05-12 | 0.2.7 | 新增exe_paths配置+自动验证hack数据 | .claude-plugin/changelog/0.2.7.md
 2026-05-12 | 0.2.6 | 删除template_path；Code Location防呆修复 | .claude-plugin/changelog/0.2.6.md
 2026-05-10 | 0.2.5 | 权限配置+插件目录；配置版本≠插件版本；remind开关；Config独揽更新 | .claude-plugin/changelog/0.2.5.md
 2026-05-10 | 0.2.4 | acm: Code Location段禁搜索; acm-config: 拆Step2+权限选项 | .claude-plugin/changelog/0.2.4.md

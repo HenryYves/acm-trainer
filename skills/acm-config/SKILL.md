@@ -18,7 +18,7 @@ Read `.claude/acm-trainer.local.md`.
 
 ```
 === ACM Trainer 当前配置 ===
-配置版本: <config_version>（最新配置格式: 0.2.5）
+配置版本: <config_version>（最新配置格式: 0.2.6）
 最后修改: <last_modified>
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
@@ -28,15 +28,16 @@ Read `.claude/acm-trainer.local.md`.
 模板代码: <有/无>
 变值常量: <无 or 常量名列表>
 评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom>
+可执行文件: <无 / N个关键词→exe路径>
 版本更新提醒: <是/否>
 =========================
 ```
 
-**Version check**: The latest config schema version is `0.2.5`.
+**Version check**: The latest config schema version is `0.2.6`.
 
-If `config_version` is `"0.2.5"` or newer → no action, proceed to Step 2.
+If `config_version` is `"0.2.6"` or newer → no action, proceed to Step 2.
 
-If `config_version` is missing or older than `"0.2.5"`:
+If `config_version` is missing or older than `"0.2.6"`:
 
 1. Compare the parsed config against the complete field list (with defaults from acm-setup):
 
@@ -56,7 +57,7 @@ If `config_version` is missing or older than `"0.2.5"`:
 
 2. 找出用户配置中**缺失的字段**。忽略 `config_version`、`last_modified`（总是自动更新）。如果 `code_location_mode` 为 `none`，也忽略 `code_paths`。
 
-3. **如果没有任何字段缺失**（只是版本号旧）：直接更新 `config_version` → `"0.2.5"`，`last_modified` → 今天日期。提示"配置内容已是最新，仅升级版本号。"然后进入 Step 2。
+3. **如果没有任何字段缺失**（只是版本号旧）：直接更新 `config_version` → `"0.2.6"`，`last_modified` → 今天日期。提示"配置内容已是最新，仅升级版本号。"然后进入 Step 2。
 
 4. **如果有字段缺失**：列出缺失字段及用途。然后 AskUserQuestion：
    - header: "配置升级"
@@ -66,7 +67,7 @@ If `config_version` is missing or older than `"0.2.5"`:
      - "是，逐项配置" — 对每个缺失字段，用 acm-setup 对应步骤的问题引导选择（不重新走完整 setup，只问缺失的字段）
      - "跳过" — 保留当前配置不变，版本号不升级（下次仍会提示）
 
-5. 如果选"是，逐项配置"：按 setup 步骤顺序，对每个缺失字段用对应的 AskUserQuestion 让用户选择。全部配置完后，写入配置文件：保留原有字段值 + 新字段值，`config_version` → `"0.2.5"`，`last_modified` → 今天日期。
+5. 如果选"是，逐项配置"：按 setup 步骤顺序，对每个缺失字段用对应的 AskUserQuestion 让用户选择。全部配置完后，写入配置文件：保留原有字段值 + 新字段值，`config_version` → `"0.2.6"`，`last_modified` → 今天日期。
 
 6. 如果选"跳过"：不修改配置，继续 Step 2。
 
@@ -105,6 +106,7 @@ AskUserQuestion:
 - multiSelect: true
 - options:
   - "版本更新提醒" — 切换是否在配置版本落后时提醒（当前: <remind_config_update>）
+  - "可执行文件路径" — 配置/修改 C++ exe 路径，hack 生成后自动跑验证
   - "变值常量" — 修改每题需要调整的常量列表（仅在已配置模板时显示）
   - "以上都没有" — 不需要修改
 
@@ -121,6 +123,8 @@ For "变值常量": present the full list of candidates from the template (re-sc
 For "自动修改代码": ask with the same question as acm-setup Step 4. Toggle `auto_edit_code`.
 
 For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + Step 6a of acm-setup), including per-problem constant confirmation.
+
+For "可执行文件路径": use the same question flow as acm-setup Step 2b. Ask: 不配置 / 手动指定 / 尝试自动寻找. If manually specifying or re-running auto-find, use the current keywords from `code_paths`. Update `exe_paths`.
 
 For "评测机速度": use the same options as acm-setup Step 9. Update `time_limit_baseline`.
 

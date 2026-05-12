@@ -35,6 +35,38 @@ AskUserQuestion:
 
 **"多个文件，用关键词区分"** → ask for comma-separated key→path mapping (e.g., "my=D:\my.cpp, A=D:\sub_project\A\A.cpp"). Set `code_location_mode: files`.
 
+## Step 2b: Exe Paths (Hack Verification)
+
+Only ask this step if `code_location_mode` is not `none` and `solution_language` is `cpp` or `match_code`. For Python or no-code-location users, skip to Step 3.
+
+AskUserQuestion:
+- header: "exe路径"
+- question: "是否配置可执行文件路径？这样代码审查生成 hack 数据后可以自动跑你的 exe 验证实际输出。（C++ 编译产物的路径，Python 不需要）"
+- multiSelect: false
+- options:
+  - "不配置" — 跳过，hack 数据不自动验证
+  - "手动指定" — 对每个代码关键词，手动输入对应的 exe 路径
+  - "尝试自动寻找" — 对每个代码关键词，从代码文件所在目录自动搜索常见位置的 exe
+
+**"不配置"** → set `exe_paths: {}`, skip to Step 3.
+
+**"手动指定"** → for each keyword in `code_paths` (or the single keyword for `single`/`per_problem` mode), ask for the absolute exe path. Show the keyword name so the user knows which file it corresponds to. Record in `exe_paths`.
+
+**"尝试自动寻找"** → for each keyword, derive a search name from the keyword or code filename (strip .cpp extension, use as exe name). Search these directories relative to the code file's parent directory:
+- `./{name}.exe`
+- `./x64/Debug/{name}.exe`
+- `./Debug/{name}.exe`
+- `./build/{name}.exe`
+- `./build/Debug/{name}.exe`
+- `./bin/{name}.exe`
+
+Use Glob to search. Results:
+- 0 found → ask user to manually input the path for that keyword
+- 1 found → adopt it, record in `exe_paths`
+- multiple found → ask user to pick one via AskUserQuestion
+
+Report findings: "A: 找到 ./x64/Debug/A.exe → 已采用", "B: 未找到 → 请手动输入".
+
 ## Step 3: Progressive Hints
 
 AskUserQuestion:
@@ -170,6 +202,7 @@ Show a summary of all choices:
 术语风格: <pure_chinese / mixed>
 编程语言: <cpp / py / match_code>
 评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom value>
+可执行文件: <无 / N个关键词→exe路径>
 =========================
 ```
 
@@ -194,12 +227,14 @@ code_location_mode: <none|single|per_problem|files>
 code_paths:
   default: <path or dir or "">
   <keyword>: <path>  # only for files mode
+exe_paths:
+  <keyword>: <path>  # optional, for C++ hack verification
 progressive_hints: <true|false>
 auto_edit_code: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
-config_version: "0.2.5"
+config_version: "0.2.6"
 remind_config_update: true
 last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>

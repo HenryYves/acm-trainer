@@ -122,3 +122,25 @@ After the bug scan, produce hack test cases. Each hack must target a specific bu
 - **Logic error**: Construct input that violates the algorithm's core assumption
 - **TLE risk**: Construct worst-case input for the algorithm's complexity
 - **Float precision**: Construct values requiring high-precision comparison (e.g., 0.1 + 0.2 vs 0.3)
+
+## Hack Verification
+
+After generating all hack cases, check `exe_paths` from config. If the current keyword (the one the user used to refer to their code, e.g., "A") has an entry in `exe_paths`, auto-verify each hack:
+
+1. Write the hack input to a temp file at `/tmp/acm_hack_in.txt`.
+2. Run the exe via Bash, piping the input file:
+   ```
+   <exe_path> < /tmp/acm_hack_in.txt
+   ```
+   (On Windows with PowerShell fallback: `Get-Content /tmp/acm_hack_in.txt | <exe_path>`)
+3. Capture stdout. Trim whitespace from both stdout and expected output before comparing.
+4. Append to each hack entry:
+   ```
+   // 验证: ✅ 通过
+   ```
+   or
+   ```
+   // 验证: ❌ 失败 — 期望=X, 实测=Y
+   ```
+
+If `exe_paths` has no entry for the keyword, or its value is empty, skip verification silently. Do NOT fabricate paths or guess exe locations — only use the configured path.

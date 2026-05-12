@@ -20,14 +20,15 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 - `solution_language` — `cpp`, `py`, or `match_code`. Default: `cpp` (when no user code present).
 - `has_template` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`. (`template_path` removed in 0.2.5 — was never read by the skill after setup.)
 - `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
+- `exe_paths` — keyword→exe path mapping for auto-verifying hack data output. Only meaningful for C++ code. Default: `{}` (skip verification).
 - `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
-- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.5"`.
+- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.6"`.
 - `remind_config_update` — whether to remind when config version is outdated. Default: `true`.
 - `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
-If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.5"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.5），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
+If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.6"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.6），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
 
 > **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
 
@@ -78,6 +79,17 @@ Based on `code_location_mode`:
 
 If the user refers to a file by path directly, Read that path.
 
+## Hack Verification
+
+After generating hack data during code review, if `exe_paths` contains an entry for the current keyword (the one the user used to refer to their code), auto-verify the hack by running the exe:
+
+1. Write the hack input to a temp file (e.g., `/tmp/acm_hack_in.txt`).
+2. Run via Bash: `<exe_path> < /tmp/acm_hack_in.txt` (or PowerShell equivalent: `Get-Content /tmp/acm_hack_in.txt | <exe_path>`).
+3. Capture stdout and compare with expected output.
+4. Report in the hack output: `✅ 验证通过` or `❌ 验证失败: 期望=X, 实测=Y`.
+
+If `exe_paths` has no entry for the keyword, or the entry is empty, skip verification — behavior unchanged from before.
+
 ## Template-Aware Code Review
 
 If `has_template` is true, read the template summary from the markdown body of the config file. When reviewing user code:
@@ -118,3 +130,4 @@ Read only the reference file needed, not all of them. For simple, single-concept
 | "分析复杂度" / "会TLE吗" | Read `references/workflows.md`, complexity section |
 | "直接给答案" | Skip progressive hints, give full solution |
 | "给提示就行" | Enable progressive hints for this query |
+| 生成 hack 后 | If `exe_paths` has keyword entry, auto-run exe to verify expected vs actual output |
