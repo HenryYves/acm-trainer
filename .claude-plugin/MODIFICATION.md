@@ -49,7 +49,7 @@ README.md / README-EN.md        -- 用户文档
 acm/SKILL.md → 启动读 .claude/acm-trainer.local.md
 acm/SKILL.md → 场景路由 code-review.md / workflows.md
 acm/SKILL.md → 修改参考 MODIFICATION.md
-acm-setup/SKILL.md → 读 template_path → 写 .claude/acm-trainer.local.md
+acm-setup/SKILL.md → 分析模板代码 → 写 .claude/acm-trainer.local.md（不记录模板路径）
 acm-config/SKILL.md → 读/写 .claude/acm-trainer.local.md → 引用 acm-setup 步骤号
 README.md / README-EN.md → 与 acm-setup YAML模板同步
 
@@ -60,14 +60,13 @@ code_paths          | map    | {}          | Step 2  | Code Location
 progressive_hints   | bool   | true        | Step 3  | Teaching Approach
 auto_edit_code      | bool   | false       | Step 4  | Auto-Edit Behavior
 has_template        | bool   | false       | Step 5  | Template-Aware Review
-template_path       | string | ""          | Step 5  | Template-Aware Review
 template_boundary   | int    | 0           | Step 6  | Template-Aware Review
 template_entry      | string | ""          | Step 6  | Template-Aware Review
 per_problem_constants|list  | []          | Step 6a | Template-Aware Review
 terminology         | enum   | mixed       | Step 7  | Language Rules
 solution_language   | enum   | cpp         | Step 8  | Solution Language
 time_limit_baseline | int    | 100000000   | Step 9  | Complexity Analysis
-config_version      | string | "0.2.4"     | Step 11 | 迁移检查（仅在配置格式变化时升）
+config_version      | string | "0.2.5"     | Step 11 | 迁移检查（仅在配置格式变化时升）
 remind_config_update| bool   | true        | Step 11 | 是否在配置版本落后时提醒
 last_modified       | date   | ""          | Step 11 | 迁移检查
 
@@ -86,9 +85,11 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 - 参考文件按需加载：Scenario Routing只对"重"场景触发reference，简单问答用skill正文。(v0.2.2)
 - 权限合并是追加式：acm-setup Step13不覆盖已有.claude/settings.local.json。(v0.2.2)
 - config_version同步升级：改acm-setup Step11的YAML字段时，必须同步bump config_version，且acm/SKILL.md和acm-config/SKILL.md的版本检查阈值一起更新。4处硬编码保持一致。(v0.2.4)
+- 永远改源目录不改缓存：用户指定开发目录（如 D:\...\plugins\acm-trainer\）是源，~/.claude/plugins/cache/ 是安装缓存会被覆盖。改插件前先确认源目录路径。(v0.2.6)
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-05-12 | 0.2.6 | 删除template_path；Code Location防呆修复 | .claude-plugin/changelog/0.2.6.md
 2026-05-10 | 0.2.5 | 权限配置+插件目录；配置版本≠插件版本；remind开关；Config独揽更新 | .claude-plugin/changelog/0.2.5.md
 2026-05-10 | 0.2.4 | acm: Code Location段禁搜索; acm-config: 拆Step2+权限选项 | .claude-plugin/changelog/0.2.4.md
 2026-05-09 | 0.2.3 | acm: 删Startup段Glob备选方案 | .claude-plugin/changelog/0.2.3.md

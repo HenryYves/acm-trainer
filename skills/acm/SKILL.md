@@ -18,16 +18,16 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 - `auto_edit_code` — whether to auto-edit/create code files. Default: `false`.
 - `terminology` — `pure_chinese` or `mixed`. Default: `mixed`.
 - `solution_language` — `cpp`, `py`, or `match_code`. Default: `cpp` (when no user code present).
-- `has_template` / `template_path` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`.
+- `has_template` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`. (`template_path` removed in 0.2.5 — was never read by the skill after setup.)
 - `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
 - `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
-- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.4"`.
+- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.5"`.
 - `remind_config_update` — whether to remind when config version is outdated. Default: `true`.
 - `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
-If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.4"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.4），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
+If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.5"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.5），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
 
 > **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
 
@@ -66,8 +66,6 @@ First line of response must be a one-sentence insight: what the correct approach
 
 ## Code Location
 
-**The paths in `code_paths` are the exact file locations — use Read directly with the path from config. No lookup or verification is needed; the path is already known.**
-
 Based on `code_location_mode`:
 
 **`none`**: Expect the user to paste code directly. No file to read.
@@ -76,7 +74,7 @@ Based on `code_location_mode`:
 
 **`per_problem`**: The user stores one file per problem in a directory (`code_paths.default`). When the user says "看A" or "读B", construct the filename (e.g., `A.cpp`) and Read it from that directory. If the user doesn't specify which file, ask: "要看哪个题的文件？"
 
-**`files`**: The user has multiple named files with keyword mapping. When the user says "看A" or "my", find the keyword in `code_paths` and Read that exact absolute path directly — it is right there in the config.
+**`files`**: The user has multiple named files with keyword mapping. When the user says "看A" or "my", look up the keyword in `code_paths` to get the absolute path, then Read that exact path. Do NOT construct a path from the keyword name — the keyword `A` means the path stored under `code_paths.A`, not `./A.cpp` in the current directory.
 
 If the user refers to a file by path directly, Read that path.
 
