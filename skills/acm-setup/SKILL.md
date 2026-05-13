@@ -67,36 +67,6 @@ Use Glob to search. Results:
 
 Report findings: "A: 找到 ./x64/Debug/A.exe → 已采用", "B: 未找到 → 请手动输入".
 
-## Step 2c: Duipai Exe Paths (对拍)
-
-Only ask this step if `exe_paths` is non-empty (Step 2b configured at least one exe). If no exe paths, skip to Step 3.
-
-对拍：同时运行用户的程序和一个正确的参考程序，用随机小数据对比输出，用于找出用户代码的隐藏 bug。
-
-AskUserQuestion:
-- header: "对拍exe路径"
-- question: "是否配置对拍用的正确/暴力解法 exe？这样可以说"对拍"让 AI 自动生成随机数据，同时跑你的程序和正解，对比输出找差异。"
-- multiSelect: false
-- options:
-  - "不配置" — 跳过，不启用对拍功能
-  - "手动指定" — 对已配置 exe 的每个关键词，手动输入对应的正确 exe 路径
-  - "尝试自动寻找" — 对每个关键词，从正确解代码文件所在目录自动搜索
-
-**"不配置"** → set `duipai_exe_paths: {}`, skip to Step 3.
-
-**"手动指定"** → for each keyword in `exe_paths`, ask for the correct/brute-force exe path. Example: "A 的正解 exe 路径？" Record in `duipai_exe_paths`.
-
-**"尝试自动寻找"** → for each keyword, ask for the correct solution's code file path first (this is a different file from the user's code). Then search for its exe in the same directories as Step 2b:
-- `./{name}.exe`
-- `./x64/Debug/{name}.exe`
-- `./Debug/{name}.exe`
-- `./build/{name}.exe`
-- `./build/Debug/{name}.exe`
-- `./bin/{name}.exe`
-
-If the user has a keyword "C" for 正解, use that code file's path to derive the exe search.
-
-Results: same handling as Step 2b (0→ask user, 1→adopt, multiple→ask to pick).
 
 ## Step 3: Progressive Hints
 
@@ -254,7 +224,7 @@ Show a summary of all choices:
 自动修改代码: <允许/不允许>
 收录题解: <手动/自动>
 错误收集: <不收集/自动收集>
-对拍exe: <无 / N个关键词→正解exe路径>
+
 模板代码: <无 / 路径 + 摘要>
 变值常量: <无 / 选中的常量名列表>
 术语风格: <pure_chinese / mixed>
@@ -287,8 +257,7 @@ code_paths:
   <keyword>: <path>  # only for files mode
 exe_paths:
   <keyword>: <path>  # optional, for C++ hack verification
-duipai_exe_paths:
-  <keyword>: <path>  # optional, for 对拍 correct/brute-force exe
+
 collect_mistakes: <true|false>
 progressive_hints: <true|false>
 auto_edit_code: <true|false>
@@ -296,7 +265,7 @@ auto_collect_solution: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
-config_version: "0.2.9"
+config_version: "0.2.10"
 remind_config_update: true
 last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>

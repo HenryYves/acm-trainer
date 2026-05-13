@@ -187,49 +187,6 @@ When running a C++ exe compiled with MSVC on Windows via bash:
 
 If `exe_paths` has no entry for the keyword, or its value is empty, skip verification silently. Do NOT fabricate paths or guess exe locations — only use the configured path.
 
-## Duipai (对拍)
-
-When the user triggers duipai (说 "对拍", "duipai", "拍一下", "跑个对拍"):
-
-**Prerequisites**: Both `exe_paths` and `duipai_exe_paths` must have entries for the current keyword. `exe_paths[keyword]` is the user's program; `duipai_exe_paths[keyword]` is the correct/brute-force solution. If either is missing, tell the user which one is needed.
-
-**Workflow**:
-
-1. **Freshness check** for BOTH exes (per the Freshness Check above). Warn for each stale exe. If the user's exe is stale, strongly suggest recompile before duipai.
-2. **Generate a random test** respecting the problem's constraints. Keep sizes small for fast execution (n,m ≤ 10, array sizes ≤ 10, k ≤ 5). Use the configured `solution_language` to write a random data generator inline if needed, or generate the test data directly.
-3. Write the test to `/tmp/acm_duipai_in.txt`.
-4. **Run both** and capture exit codes and output:
-   ```
-   user_out=$(<user_exe> < /tmp/acm_duipai_in.txt 2>&1; echo "EXIT:$?")
-   correct_out=$(<correct_exe> < /tmp/acm_duipai_in.txt 2>&1; echo "EXIT:$?")
-   ```
-5. Interpret exit codes for both. If the user's exe crashed, report crash type (per Exit Code Interpretation table).
-6. If both exes ran successfully (exit 0), compare outputs. Trim whitespace from both before comparing. Strip the `EXIT:0` marker.
-7. **Report**:
-   ```
-   ### 对拍 Round #N
-   // 输入
-   <test input>
-   // 你的输出 (exit 0)
-   <user output>
-   // 正解输出 (exit 0)
-   <correct output>
-   // 结果: ✅ 通过
-   ```
-   Or if mismatch:
-   ```
-   // 结果: ❌ 差异 — 你的 ≠ 正解
-   ```
-   Or if crash:
-   ```
-   // 结果: 💥 崩溃 — 段错误 (exit -1073741819)
-   ```
-
-8. **Loop**: Default 10 rounds. Stop early if a mismatch or crash is found (one counterexample is enough). The user can say "停" to stop at any time.
-
-9. **Summary**: After all rounds, report: "对拍 N 轮: M 通过, K 差异, C 崩溃。"
-
-If the user's code consistently matches the correct solution, mention: "没拍出差异，可以尝试加大数据范围或增加轮数。"
 
 ## Mistake Collection
 

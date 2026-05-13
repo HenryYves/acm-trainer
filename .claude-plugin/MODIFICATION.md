@@ -9,6 +9,7 @@
 skills/acm/SKILL.md             -- 主技能：启动配置解析 + 场景路由 + 行为规则
 skills/acm/references/code-review.md  -- 代码审查工作流（重场景才加载）
 skills/acm/references/workflows.md    -- 题解/算法讲解/复杂度分析（重场景才加载）
+skills/acm/references/windows-exit-codes.md -- Windows NT 退出码完整参考表（遇到未知退出码时加载）
 skills/acm-config/SKILL.md      -- 配置管理：查看/修改用户配置
 skills/acm-setup/SKILL.md       -- 初始化向导：首次配置引导
 README.md / README-EN.md        -- 用户文档
@@ -37,13 +38,13 @@ README.md / README-EN.md        -- 用户文档
 ## 交叉引用清单
 新增/修改配置项时全部检查：
 1. skills/acm-setup/SKILL.md   -- 加收集步骤 + YAML模板字段
-2. skills/acm-config/SKILL.md  -- 加展示行 + 修改选项 + Step3处理逻辑
+2. skills/acm-config/SKILL.md  -- 加展示行 + 修改选项 + Step3处理逻辑 + Step5 whitelist
 3. skills/acm/SKILL.md         -- 加字段解析 + 默认回退值 + 行为规则
 4. README.md                   -- 加YAML示例字段
 5. README-EN.md                -- 同上
 6. .claude/acm-trainer.local.md（用户侧）-- 不改，但考虑旧配置缺字段时的回退
 
-规则：acm-setup步骤编号变→同步acm-config引用；字段名6处一致；默认值acm-setup与acm一致
+规则：acm-setup步骤编号变→同步acm-config引用；字段名6处一致；默认值acm-setup与acm一致；增删字段时同步更新acm-config Step5的schema whitelist
 
 ## 依赖关系
 acm/SKILL.md → 启动读 .claude/acm-trainer.local.md
@@ -67,9 +68,8 @@ terminology         | enum   | mixed       | Step 7  | Language Rules
 solution_language   | enum   | cpp         | Step 8  | Solution Language
 time_limit_baseline | int    | 100000000   | Step 9  | Complexity Analysis
 exe_paths           | map    | {}          | Step 2b | Hack Verification
-duipai_exe_paths    | map    | {}          | Step 2c | Duipai (对拍)
 collect_mistakes    | bool   | false       | Step 4c | Mistake Collection
-config_version      | string | "0.2.9"     | Step 11 | 迁移检查（仅在配置格式变化时升）
+config_version      | string | "0.2.10"    | Step 11 | 迁移检查（仅在配置格式变化时升）
 remind_config_update| bool   | true        | Step 11 | 是否在配置版本落后时提醒
 last_modified       | date   | ""          | Step 11 | 迁移检查
 
@@ -92,6 +92,7 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-05-13 | 0.2.12 | 移除duipai_exe_paths配置项；config_version→0.2.10；新增windows-exit-codes参考表 | .claude-plugin/changelog/0.2.12.md
 2026-05-12 | 0.2.8 | acm-config: 3次AskUserQuestion合并为1次← →翻页 | .claude-plugin/changelog/0.2.8.md
 2026-05-12 | 0.2.7 | 新增exe_paths配置+自动验证hack数据 | .claude-plugin/changelog/0.2.7.md
 2026-05-12 | 0.2.6 | 删除template_path；Code Location防呆修复 | .claude-plugin/changelog/0.2.6.md

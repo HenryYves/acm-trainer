@@ -18,7 +18,7 @@ Read `.claude/acm-trainer.local.md`.
 
 ```
 === ACM Trainer 当前配置 ===
-配置版本: <config_version>（最新配置格式: 0.2.9）
+配置版本: <config_version>（最新配置格式: 0.2.10）
 最后修改: <last_modified>
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
@@ -30,17 +30,17 @@ Read `.claude/acm-trainer.local.md`.
 变值常量: <无 or 常量名列表>
 评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom>
 可执行文件: <无 / N个关键词→exe路径>
-对拍exe: <无 / N个关键词→正解exe路径>
+
 错误收集: <不收集/自动收集>
 版本更新提醒: <是/否>
 =========================
 ```
 
-**Version check**: The latest config schema version is `0.2.9`.
+**Version check**: The latest config schema version is `0.2.10`.
 
-If `config_version` is `"0.2.9"` or newer → no action, proceed to Step 2.
+If `config_version` is `"0.2.10"` or newer → no action, proceed to Step 2.
 
-If `config_version` is missing or older than `"0.2.9"`:
+If `config_version` is missing or older than `"0.2.10"`:
 
 1. Compare the parsed config against the complete field list (with defaults from acm-setup):
 
@@ -55,7 +55,7 @@ If `config_version` is missing or older than `"0.2.9"`:
    | `solution_language` | Step 8 | `cpp` |
    | `time_limit_baseline` | Step 9 | `100000000` |
    | `exe_paths` | Step 2b | `{}` |
-   | `duipai_exe_paths` | Step 2c | `{}` |
+
    | `collect_mistakes` | Step 4c | `false` |
    | `has_template` | Step 5 | `false` |
    | `remind_config_update` | — | `true` |
@@ -112,7 +112,7 @@ Present all options in a **single** `AskUserQuestion` call with 3 questions. The
 - options:
   - "版本更新提醒" — 切换是否在配置版本落后时提醒（当前: <remind_config_update>）
   - "可执行文件路径" — 配置/修改 C++ exe 路径，hack 生成后自动跑验证
-  - "对拍exe路径" — 配置/修改对拍用的正确/暴力解法 exe
+
   - "错误收集" — 切换是否自动收集编码错误模式
   - "变值常量" — 修改每题需要调整的常量列表
   - "以上都没有" — 不需要修改
@@ -137,7 +137,6 @@ For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + S
 
 For "可执行文件路径": use the same question flow as acm-setup Step 2b. Ask: 不配置 / 手动指定 / 尝试自动寻找. If manually specifying or re-running auto-find, use the current keywords from `code_paths`. Update `exe_paths`.
 
-For "对拍exe路径": use the same question flow as acm-setup Step 2c. Requires `exe_paths` to be non-empty first — if user has no `exe_paths` configured, tell them to configure that first. Ask: 不配置 / 手动指定 / 尝试自动寻找. For auto-find, ask for the correct solution's code file path first, then search. Update `duipai_exe_paths`.
 
 For "错误收集": AskUserQuestion — header: "错误收集", question: "是否自动记录代码审查中发现的编码错误模式？", options: "不收集" (set `false`) / "自动收集" (set `true`). Update `collect_mistakes`.
 
@@ -205,6 +204,19 @@ AskUserQuestion:
 
 ## Step 5: Write
 
-Merge changes into the existing YAML frontmatter. Update `last_modified` to today's date (YYYY-MM-DD). Preserve the markdown body (template summary) unchanged unless "重新分析模板" or "变值常量" was selected — in that case update the relevant sections.
+**Schema cleanup first**: To prevent deprecated config fields from accumulating (e.g., `duipai_exe_paths` after removal), strip unknown keys from the old YAML frontmatter before writing. The current config schema consists of these keys:
+
+```
+code_location_mode, code_paths, progressive_hints, auto_edit_code,
+auto_collect_solution, terminology, solution_language, time_limit_baseline,
+exe_paths, collect_mistakes, has_template, template_boundary,
+template_entry, per_problem_constants, config_version, remind_config_update,
+last_modified
+```
+
+1. From the parsed old YAML frontmatter, keep only keys that appear in the whitelist above. Drop any others.
+2. Merge the new/changed values into the filtered config.
+3. Set `config_version` to `"0.2.10"` and `last_modified` to today's date.
+4. Preserve the markdown body (template summary) unchanged unless "重新分析模板" or "变值常量" was selected — in that case update the relevant sections.
 
 Write with Write tool. Confirm: "配置已更新。"
