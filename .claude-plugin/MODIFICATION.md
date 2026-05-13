@@ -67,7 +67,9 @@ terminology         | enum   | mixed       | Step 7  | Language Rules
 solution_language   | enum   | cpp         | Step 8  | Solution Language
 time_limit_baseline | int    | 100000000   | Step 9  | Complexity Analysis
 exe_paths           | map    | {}          | Step 2b | Hack Verification
-config_version      | string | "0.2.6"     | Step 11 | 迁移检查（仅在配置格式变化时升）
+duipai_exe_paths    | map    | {}          | Step 2c | Duipai (对拍)
+collect_mistakes    | bool   | false       | Step 4c | Mistake Collection
+config_version      | string | "0.2.9"     | Step 11 | 迁移检查（仅在配置格式变化时升）
 remind_config_update| bool   | true        | Step 11 | 是否在配置版本落后时提醒
 last_modified       | date   | ""          | Step 11 | 迁移检查
 

@@ -21,15 +21,17 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 - `has_template` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`. (`template_path` removed in 0.2.5 — was never read by the skill after setup.)
 - `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
 - `exe_paths` — keyword→exe path mapping for auto-verifying hack data output. Only meaningful for C++ code. Default: `{}` (skip verification).
+- `duipai_exe_paths` — keyword→correct/brute-force exe path mapping for 对拍 comparison. Paired with `exe_paths` (same keyword must exist in both). Default: `{}` (skip duipai).
+- `collect_mistakes` — whether to auto-save coding mistake patterns after code review, and reference past mistakes during future reviews. Default: `false`.
 - `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
-- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.6"`.
+- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.9"`.
 - `remind_config_update` — whether to remind when config version is outdated. Default: `true`.
 - `auto_collect_solution` — whether to auto-save solution when user provides an editorial/solution. Default: `false`.
 - `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
-If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.6"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.6），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
+If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.9"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.9），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
 
 > **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
 
@@ -139,16 +141,75 @@ Based on `code_location_mode`:
 
 If the user refers to a file by path directly, Read that path.
 
-## Hack Verification
+## Exe Diagnostics & Hack Verification
 
 After generating hack data during code review, if `exe_paths` contains an entry for the current keyword (the one the user used to refer to their code), auto-verify the hack by running the exe:
 
 1. Write the hack input to a temp file (e.g., `/tmp/acm_hack_in.txt`).
-2. Run via Bash: `<exe_path> < /tmp/acm_hack_in.txt` (or PowerShell equivalent: `Get-Content /tmp/acm_hack_in.txt | <exe_path>`).
-3. Capture stdout and compare with expected output.
-4. Report in the hack output: `✅ 验证通过` or `❌ 验证失败: 期望=X, 实测=Y`.
+2. Run via Bash: `<exe_path> < /tmp/acm_hack_in.txt 2>&1; echo "EXIT:$?"` (capture both stdout and the exit code marker).
+3. **Interpret the exit code** per the table below BEFORE comparing output. If the program crashed, report the crash type instead of treating it as wrong output.
+4. If the program ran successfully (exit 0), capture stdout and compare with expected output.
+5. Report: `✅ 验证通过`, `❌ 验证失败: 期望=X, 实测=Y`, or `💥 崩溃 (<type>)`.
+
+### Exit Code Interpretation
+
+When running a C++ exe compiled with MSVC on Windows via bash, exit codes carry diagnostic information:
+
+| Exit code / Signal | 诊断 |
+|--------------------|------|
+| `0` | 正常退出 |
+| `139` (SIGSEGV) or exit `3` | 段错误 — 数组越界 / 空指针 / 野指针 |
+| `134` (SIGABRT) | 断言失败 — `assert()` 触发或 `abort()` 调用 |
+| `136` (SIGFPE) | 浮点异常 — 除零 / 模零 / 整数溢出(少数情况) |
+| exit `-1073741819` (`0xC0000005`) | Windows ACCESS_VIOLATION — 等同段错误 |
+| exit `-1073741571` (`0xC00000FD`) | Windows STACK_OVERFLOW — 递归过深 / 大局部数组 |
+| exit `-1073741676` (`0xC0000094`) | Windows INTEGER_DIVISION_BY_ZERO |
+| 其他非零退出码 | 程序异常退出，检查 stderr 输出 |
+
+### Exe Freshness Check
+
+Before running any exe, verify it is up-to-date with the source:
+
+- Read the exe's modification time (e.g., `stat` command) and compare with the source `.cpp` file's modification time.
+- If the exe is older than the source → warn: "⚠️ exe 比源代码旧，可能未重新编译。建议重新编译后再验证。" Then skip verification for that hack (output may be from old code).
+
+Do NOT run stale exe silently — the output would be misleading.
 
 If `exe_paths` has no entry for the keyword, or the entry is empty, skip verification — behavior unchanged from before.
+
+## Duipai (对拍)
+
+When the user says "对拍", "duipai", "拍一下", "跑个对拍", or asks to stress-test their code against a correct solution:
+
+**Prerequisites**: Both `exe_paths` and `duipai_exe_paths` must have entries for the current keyword. If either is missing, tell the user: "对拍需要两个 exe：你的 exe (exe_paths) 和正解 exe (duipai_exe_paths)。当前缺少 <which one>。请在 acm-config 中配置。"
+
+**Workflow**:
+1. Run the exe freshness check for BOTH exes (see Exe Diagnostics section). Warn if either is stale.
+2. Generate a small random test case that respects the problem's constraints. Keep it small (n,m ≤ 10, k ≤ 5) for fast execution.
+3. Write the test input to `/tmp/acm_duipai_in.txt`.
+4. Run both exes:
+   - `user_out=$(<user_exe> < /tmp/acm_duipai_in.txt 2>&1; echo "EXIT:$?")`
+   - `correct_out=$(<correct_exe> < /tmp/acm_duipai_in.txt 2>&1; echo "EXIT:$?")`
+5. Interpret exit codes for both. If either crashed, report the crash type.
+6. If both ran successfully, compare outputs (after trimming whitespace).
+7. Report:
+   - `✅ 对拍通过` — outputs match
+   - `❌ 对拍发现差异` — show input, user output, correct output
+   - `💥 你的程序崩溃 (<type>)` — user exe crashed
+8. If the user wants repeated rounds, loop steps 2-7 (default 10 rounds or until user stops with "停").
+
+For detailed duipai workflow, see `references/code-review.md`.
+
+## Mistake Collection
+
+If `collect_mistakes` is `true`, after completing a code review that found bugs:
+
+1. Summarize the bugs into concise mistake patterns — one line each, categorized (段错误/越界, 逻辑反转, 未初始化, 溢出, 取模, 边界条件, etc.).
+2. Read `.claude/acm-trainer/mistakes.md` if it exists (create if not). Append new patterns, avoiding exact duplicates.
+3. Format each entry as: `- [<category>] <pattern description> — <date>`
+4. **During future code reviews**, read `.claude/acm-trainer/mistakes.md` and check whether the user's current code repeats any recorded patterns. If a match is found, flag it: "⚠️ 历史错误再现：<pattern> —— 你之前 <date> 犯过类似错误。"
+
+The user can review their mistake log by saying "查看错误记录" or "mistakes". The user can manually trigger saving with "记录这个错误".
 
 ## Template-Aware Code Review
 
@@ -192,4 +253,6 @@ Read only the reference file needed, not all of them. For simple, single-concept
 | "给提示就行" | Enable progressive hints for this query |
 | "接着想" / "继续苦思冥想" | Stop admitting difficulty, keep attempting silently |
 | "收录这道题" / "记录题解" / "收藏一下" | Check duplicate → summarize with 如何想到 → write detail → update index |
-| 生成 hack 后 | If `exe_paths` has keyword entry, auto-run exe to verify expected vs actual output |
+| 生成 hack 后 | If `exe_paths` has keyword entry, run freshness check first, then auto-run exe to verify; interpret exit codes for crash diagnosis |
+| "对拍" / "拍一下" / "duipai" | Run duipai: generate random test → run user exe + correct exe → compare outputs; requires `duipai_exe_paths` |
+| "查看错误记录" / "mistakes" | Read `.claude/acm-trainer/mistakes.md` and show summary |

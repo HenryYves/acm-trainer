@@ -144,14 +144,35 @@ After the bug scan, produce hack test cases. Each hack must target a specific bu
 
 After generating all hack cases, check `exe_paths` from config. If the current keyword (the one the user used to refer to their code, e.g., "A") has an entry in `exe_paths`, auto-verify each hack:
 
-1. Write the hack input to a temp file at `/tmp/acm_hack_in.txt`.
-2. Run the exe via Bash, piping the input file:
+1. **Freshness check first**: Before running, compare the exe's modification time with the source `.cpp` file's modification time (the file at `code_paths[keyword]`). Use `stat` or equivalent to get both timestamps.
+   - If exe is older → warn: "⚠️ <keyword>.exe 比源代码旧，可能未重新编译。建议重新编译后再验证。" Then skip verification (stale output is misleading).
+   - If exe is newer or same → proceed.
+
+2. Write the hack input to a temp file at `/tmp/acm_hack_in.txt`.
+3. Run the exe via Bash, capturing both stdout and exit code:
    ```
-   <exe_path> < /tmp/acm_hack_in.txt
+   <exe_path> < /tmp/acm_hack_in.txt 2>&1; echo "EXIT:$?"
    ```
-   (On Windows with PowerShell fallback: `Get-Content /tmp/acm_hack_in.txt | <exe_path>`)
-3. Capture stdout. Trim whitespace from both stdout and expected output before comparing.
-4. Append to each hack entry:
+   (On Windows with PowerShell fallback: `Get-Content /tmp/acm_hack_in.txt | <exe_path> 2>&1; echo "EXIT:$?"`)
+4. Extract the exit code from the `EXIT:N` marker. Interpret it:
+
+### Exit Code Interpretation
+
+When running a C++ exe compiled with MSVC on Windows via bash:
+
+| Exit code / Pattern | 诊断 | 说明 |
+|----------------------|------|------|
+| `0` | 正常退出 | 继续比较输出 |
+| `3` or `139` or `EXIT:-1073741819` | 段错误 (ACCESS_VIOLATION) | 数组越界、空指针解引用、野指针、访问已释放内存 |
+| `136` or `EXIT:-1073741676` | 除零异常 (INTEGER_DIVISION_BY_ZERO) | 整数除零或模零操作 |
+| `134` or `EXIT:-1073740940` | 断言/退出 (ABORT) | `assert()` 触发或 `abort()` 被调用 |
+| `EXIT:-1073741571` | 栈溢出 (STACK_OVERFLOW) | 递归过深或局部数组太大 |
+| 其他非零 `EXIT:N` | 程序异常退出 | 报告 exit code，检查是否有 stderr 输出 |
+
+**When the program crashes**: Report as `💥 崩溃 (<诊断类型>)` rather than treating it as wrong output. Include the exit code and suggested cause. Example: "💥 崩溃: 段错误 (exit -1073741819) — 很可能是数组越界或空指针。"
+
+5. If the program ran successfully (exit 0), capture stdout. Trim whitespace from both stdout and expected output before comparing.
+6. Append to each hack entry:
    ```
    // 验证: ✅ 通过
    ```
@@ -159,5 +180,103 @@ After generating all hack cases, check `exe_paths` from config. If the current k
    ```
    // 验证: ❌ 失败 — 期望=X, 实测=Y
    ```
+   or
+   ```
+   // 验证: 💥 崩溃 — 段错误 (exit -1073741819), 很可能是数组越界
+   ```
 
 If `exe_paths` has no entry for the keyword, or its value is empty, skip verification silently. Do NOT fabricate paths or guess exe locations — only use the configured path.
+
+## Duipai (对拍)
+
+When the user triggers duipai (说 "对拍", "duipai", "拍一下", "跑个对拍"):
+
+**Prerequisites**: Both `exe_paths` and `duipai_exe_paths` must have entries for the current keyword. `exe_paths[keyword]` is the user's program; `duipai_exe_paths[keyword]` is the correct/brute-force solution. If either is missing, tell the user which one is needed.
+
+**Workflow**:
+
+1. **Freshness check** for BOTH exes (per the Freshness Check above). Warn for each stale exe. If the user's exe is stale, strongly suggest recompile before duipai.
+2. **Generate a random test** respecting the problem's constraints. Keep sizes small for fast execution (n,m ≤ 10, array sizes ≤ 10, k ≤ 5). Use the configured `solution_language` to write a random data generator inline if needed, or generate the test data directly.
+3. Write the test to `/tmp/acm_duipai_in.txt`.
+4. **Run both** and capture exit codes and output:
+   ```
+   user_out=$(<user_exe> < /tmp/acm_duipai_in.txt 2>&1; echo "EXIT:$?")
+   correct_out=$(<correct_exe> < /tmp/acm_duipai_in.txt 2>&1; echo "EXIT:$?")
+   ```
+5. Interpret exit codes for both. If the user's exe crashed, report crash type (per Exit Code Interpretation table).
+6. If both exes ran successfully (exit 0), compare outputs. Trim whitespace from both before comparing. Strip the `EXIT:0` marker.
+7. **Report**:
+   ```
+   ### 对拍 Round #N
+   // 输入
+   <test input>
+   // 你的输出 (exit 0)
+   <user output>
+   // 正解输出 (exit 0)
+   <correct output>
+   // 结果: ✅ 通过
+   ```
+   Or if mismatch:
+   ```
+   // 结果: ❌ 差异 — 你的 ≠ 正解
+   ```
+   Or if crash:
+   ```
+   // 结果: 💥 崩溃 — 段错误 (exit -1073741819)
+   ```
+
+8. **Loop**: Default 10 rounds. Stop early if a mismatch or crash is found (one counterexample is enough). The user can say "停" to stop at any time.
+
+9. **Summary**: After all rounds, report: "对拍 N 轮: M 通过, K 差异, C 崩溃。"
+
+If the user's code consistently matches the correct solution, mention: "没拍出差异，可以尝试加大数据范围或增加轮数。"
+
+## Mistake Collection
+
+When `collect_mistakes` is `true`, after completing a code review that found bugs (the user fixed them or acknowledged them):
+
+### Saving Mistakes
+
+1. Summarize each bug into a concise pattern — one line, categorized:
+
+   | 分类 | 示例 |
+   |------|------|
+   | 段错误/越界 | `k==0 后无 return，空 vector 被访问` |
+   | 逻辑反转 | `相邻列 nx>px 与 nx<px 的转移公式互换` |
+   | 未初始化 | `nowdown 在 know<klast 分支未赋值` |
+   | 溢出 | `乘法前未取模，int 乘积溢出` |
+   | 取模 | `减法取模忘 +MOD` |
+   | 边界条件 | `指数 m-2 应为 m-1` |
+   | 变量混淆 | `now==m 应改为 last==m（now 在 k=1 时未赋值）` |
+
+2. Read `.claude/acm-trainer/mistakes.md` if it exists. If not, create it with a header:
+   ```markdown
+   # 常见编码错误记录
+   
+   自动收集，代码审查时参考。
+   
+   ```
+
+3. Append new patterns (avoid exact duplicates — if a pattern is already recorded, skip it). Format:
+   ```
+   - [<category>] <pattern> — <YYYY-MM-DD>
+   ```
+
+4. Mention briefly: "已记录 N 个错误模式到知识库。"
+
+### Referencing Mistakes
+
+**Before or during** any code review (when `collect_mistakes` is `true`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
+
+```
+⚠️ 历史错误再现：[<category>] <pattern> — 你之前在 <date> 犯过类似错误。
+```
+
+Only flag if the pattern genuinely matches the current code — don't force false positives. The goal is to help the user notice recurring blind spots.
+
+### Manual Triggers
+
+The user can manually trigger saving at any time:
+- "记录这个错误" / "收藏这个bug" → save the most recently discussed bug pattern
+- "查看错误记录" / "mistakes" → read and display `.claude/acm-trainer/mistakes.md`
+- "清空错误记录" → delete the file (confirm first)
