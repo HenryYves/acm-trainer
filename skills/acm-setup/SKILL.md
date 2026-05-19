@@ -104,13 +104,14 @@ Set `auto_collect_solution: false` for "手动指定", `true` for "自动收录"
 
 AskUserQuestion:
 - header: "错误收集"
-- question: "是否让 AI 自动记录代码审查中发现的编码错误模式？记录后，后续审查会自动参考历史错误，帮你发现反复犯的同类错误。"
+- question: "代码审查发现 bug 后，如何记录错误模式？记录后，后续审查会自动参考历史错误，帮你发现反复犯的同类错误。"
 - multiSelect: false
 - options:
-  - "不收集（默认）" — 不自动记录，需要时手动说"记录这个错误"
-  - "自动收集" — 每次代码审查发现 bug 后，自动总结为错误模式保存到本地
+  - "手动收集（默认）" — 不自动总结收集，只有你说"记录这个错误"时才记录
+  - "自动总结，确认后收录" — 代码审查后自动总结为错误模式，列出后问你是否收录
+  - "自动静默收集" — 代码审查后自动总结并直接保存，不做二次确认
 
-Set `collect_mistakes: false` for "不收集", `true` for "自动收集".
+Set `collect_mistakes: "manual"` for "手动收集", `"confirm"` for "自动总结确认", `"auto"` for "自动静默收集".
 
 ## Step 5: Template Code
 
@@ -223,7 +224,7 @@ Show a summary of all choices:
 渐进式引导: <是/否>
 自动修改代码: <允许/不允许>
 收录题解: <手动/自动>
-错误收集: <不收集/自动收集>
+错误收集: <手动收集 / 自动总结确认 / 自动静默收集>
 
 模板代码: <无 / 路径 + 摘要>
 变值常量: <无 / 选中的常量名列表>
@@ -258,14 +259,14 @@ code_paths:
 exe_paths:
   <keyword>: <path>  # optional, for C++ hack verification
 
-collect_mistakes: <true|false>
+collect_mistakes: <"manual"|"confirm"|"auto">
 progressive_hints: <true|false>
 auto_edit_code: <true|false>
 auto_collect_solution: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
-config_version: "0.2.10"
+config_version: "0.2.11"
 remind_config_update: true
 last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>

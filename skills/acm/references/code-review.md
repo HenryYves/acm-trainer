@@ -190,11 +190,11 @@ If `exe_paths` has no entry for the keyword, or its value is empty, skip verific
 
 ## Mistake Collection
 
-When `collect_mistakes` is `true`, after completing a code review that found bugs (the user fixed them or acknowledged them):
+`collect_mistakes` has three modes: `"manual"` (never auto, only on explicit command), `"confirm"` (auto-summarize → ask user), `"auto"` (auto-save silently). See `acm/SKILL.md` Mistake Collection section for full mode descriptions.
 
-### Saving Mistakes
+### Saving Format (all modes)
 
-1. Summarize each bug into a concise pattern — one line, categorized:
+1. Summarize each bug into a **generalizable** pattern — not tied to the specific problem. Categories:
 
    | 分类 | 示例 |
    |------|------|
@@ -205,8 +205,9 @@ When `collect_mistakes` is `true`, after completing a code review that found bug
    | 取模 | `减法取模忘 +MOD` |
    | 边界条件 | `指数 m-2 应为 m-1` |
    | 变量混淆 | `now==m 应改为 last==m（now 在 k=1 时未赋值）` |
+   | 哨兵值设置错误 | `min/max初始化用了具体数字而非INF/-INF，初始值意外成为答案` |
 
-2. Read `.claude/acm-trainer/mistakes.md` if it exists. If not, create it with a header:
+2. Read `.claude/acm-trainer/mistakes.md` in the project root. If it doesn't exist, create it with a header:
    ```markdown
    # 常见编码错误记录
    
@@ -214,26 +215,37 @@ When `collect_mistakes` is `true`, after completing a code review that found bug
    
    ```
 
-3. Append new patterns (avoid exact duplicates — if a pattern is already recorded, skip it). Format:
-   ```
-   - [<category>] <pattern> — <YYYY-MM-DD>
-   ```
+3. For each pattern, check if it already exists (same category + same description text).
+   - **New pattern**: append a new line.
+   - **Existing pattern**: update the count and last-seen date (do NOT create a duplicate line).
 
-4. Mention briefly: "已记录 N 个错误模式到知识库。"
+4. Format each entry:
+   ```
+   - [<category>] <generalizable pattern description> — 次数: <N>, 首次: <YYYY-MM-DD>, 最近: <YYYY-MM-DD>
+   ```
+   - When creating: 次数 = 1, 首次 = 最近 = today.
+   - When updating existing: increment 次数, update 最近 to today, leave 首次 unchanged.
+
+5. Mention briefly: "已记录 N 个错误模式到知识库（其中 M 个为新增）。"
+
+**Good vs bad descriptions:**
+- ❌ `ans初始化为n导致n=3时错误` — 绑定具体题面
+- ✅ `哨兵值设置错误 — min/max维护的初始值用了具体数字而非INF/-INF`
+- ❌ `sqrt(x)应为sqrt(n)，小x时漏掉最优函数` — 脱离题面无意义
+- ✅ `变量混淆 — 搜索半径/循环上限等算法参数使用了错误的变量`
 
 ### Referencing Mistakes
 
-**Before or during** any code review (when `collect_mistakes` is `true`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
+**Before or during** any code review (when `collect_mistakes` is not `"manual"`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
 
 ```
-⚠️ 历史错误再现：[<category>] <pattern> — 你之前在 <date> 犯过类似错误。
+⚠️ 历史错误再现：[<category>] <pattern> — 你之前在 <date> 犯过类似错误（共 <count> 次）。
 ```
 
-Only flag if the pattern genuinely matches the current code — don't force false positives. The goal is to help the user notice recurring blind spots.
+Only flag if the pattern genuinely matches — don't force false positives.
 
 ### Manual Triggers
 
-The user can manually trigger saving at any time:
-- "记录这个错误" / "收藏这个bug" → save the most recently discussed bug pattern
+- "记录这个错误" / "收藏这个bug" → save the most recently discussed bug pattern (works in all modes)
 - "查看错误记录" / "mistakes" → read and display `.claude/acm-trainer/mistakes.md`
 - "清空错误记录" → delete the file (confirm first)

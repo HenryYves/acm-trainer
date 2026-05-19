@@ -2,6 +2,12 @@
 > 导航索引。skill-creator、plugin-dev:create-plugin 及其他修改本插件的 skill/模型读此文件后按路径找目标，不搜索。
 > 改完改版本号：.claude-plugin/plugin.json → version
 
+## ⚠️⚠️⚠️ 改源目录，不改缓存（事不过三）
+**你正在修改的是 Git 源目录**（`D:\a_my\project\Claude_code\plugins\acm-trainer\`），**不是** `~/.claude/plugins/cache/` 下的安装缓存。
+缓存目录是用户安装插件时复制过去的副本，会被覆盖。你在源目录改完→用户重新安装→缓存更新。
+**永远用 Write/Edit 改 `D:\a_my\project\Claude_code\plugins\acm-trainer\` 下的文件。** 如果不确定路径，先问用户。
+本条警告优先级最高——之前两次都改错了缓存，第三次不能再犯。
+
 ## 文件清单
 路径相对插件根目录。
 
@@ -69,8 +75,8 @@ terminology         | enum   | mixed       | Step 7  | Language Rules
 solution_language   | enum   | cpp         | Step 8  | Solution Language
 time_limit_baseline | int    | 100000000   | Step 9  | Complexity Analysis
 exe_paths           | map    | {}          | Step 2b | Hack Verification
-collect_mistakes    | bool   | false       | Step 4c | Mistake Collection
-config_version      | string | "0.2.10"    | Step 11 | 迁移检查（仅在配置格式变化时升）
+collect_mistakes    | enum   | "manual"    | Step 4c | Mistake Collection (manual/confirm/auto)
+config_version      | string | "0.2.11"    | Step 11 | 迁移检查（仅在配置格式变化时升）
 remind_config_update| bool   | true        | Step 11 | 是否在配置版本落后时提醒
 last_modified       | date   | ""          | Step 11 | 迁移检查
 
@@ -90,9 +96,12 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 - 权限合并是追加式：acm-setup Step13不覆盖已有.claude/settings.local.json。(v0.2.2)
 - config_version同步升级：改acm-setup Step11的YAML字段时，必须同步bump config_version，且acm/SKILL.md和acm-config/SKILL.md的版本检查阈值一起更新。4处硬编码保持一致。(v0.2.4)
 - 永远改源目录不改缓存：用户指定开发目录（如 D:\...\plugins\acm-trainer\）是源，~/.claude/plugins/cache/ 是安装缓存会被覆盖。改插件前先确认源目录路径。(v0.2.6)
+- AskUserQuestion 每问题最多 4 个选项：配置页面设计时每个 question 的 options 数组不能超过 4 项，否则报 `too_big` 错误。超限时拆成更多 question。(v0.2.14)
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-05-19 | 0.2.15 | collect_mistakes三态枚举(manual/confirm/auto)；错误描述泛化；config_version→0.2.11 | .claude-plugin/changelog/0.2.15.md
+2026-05-19 | 0.2.14 | acm-config选项数修正；错误收集增强（计数+时间+强制执行）；MODIFICATION.md醒目警告 | .claude-plugin/changelog/0.2.14.md
 2026-05-19 | 0.2.13 | 模板摘要拆分为独立文件；重新分析模板需diff对比 | .claude-plugin/changelog/0.2.13.md
 2026-05-13 | 0.2.12 | 移除duipai_exe_paths配置项；config_version→0.2.10；新增windows-exit-codes参考表 | .claude-plugin/changelog/0.2.12.md
 2026-05-12 | 0.2.8 | acm-config: 3次AskUserQuestion合并为1次← →翻页 | .claude-plugin/changelog/0.2.8.md

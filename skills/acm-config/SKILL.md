@@ -31,16 +31,16 @@ Read `.claude/acm-trainer.local.md`.
 评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom>
 可执行文件: <无 / N个关键词→exe路径>
 
-错误收集: <不收集/自动收集>
+错误收集: <手动收集 / 自动总结确认 / 自动静默收集>
 版本更新提醒: <是/否>
 =========================
 ```
 
 **Version check**: The latest config schema version is `0.2.10`.
 
-If `config_version` is `"0.2.10"` or newer → no action, proceed to Step 2.
+If `config_version` is `"0.2.11"` or newer → no action, proceed to Step 2.
 
-If `config_version` is missing or older than `"0.2.10"`:
+If `config_version` is missing or older than `"0.2.11"`:
 
 1. Compare the parsed config against the complete field list (with defaults from acm-setup):
 
@@ -82,46 +82,51 @@ If `config_version` is missing or older than `"0.2.10"`:
 
 ## Step 2: Choose What to Change
 
-Present all options in a **single** `AskUserQuestion` call with 3 questions. The user navigates between them with `←` `→` arrow keys and submits once. Collect all selections across all 3 questions before proceeding to Step 3.
+Present all options in a **single** `AskUserQuestion` call with 4 questions (each ≤4 options, per tool limit). The user navigates between them with `←` `→` arrow keys and submits once. Collect all selections across all 4 questions before proceeding to Step 3.
 
 **Question 1:**
-- header: "修改配置 (1/3)"
-- question: "想修改哪些项？"
+- header: "修改配置 (1/4)"
+- question: "第 1 组：代码与交互类配置，想修改哪些？"
 - multiSelect: true
 - options:
   - "代码位置" — 重新选择代码存放方式
   - "引导方式" — 切换渐进式引导开关
   - "自动修改代码" — 切换代码审查时直接修改文件
   - "术语风格" — 切换纯中文 / 保留英文缩写
-  - "收录题解" — 切换手动/自动收录题解到本地知识库
 
 **Question 2:**
-- header: "修改配置 (2/3)"
-- question: "想修改哪些项？"
+- header: "修改配置 (2/4)"
+- question: "第 2 组：收录与工具类配置，想修改哪些？"
 - multiSelect: true
 - options:
+  - "收录题解" — 切换手动/自动收录题解到本地知识库
   - "编程语言" — 切换 C++ / Python / 跟随当前代码
   - "评测机速度" — 调整复杂度分析的 Safe N 基准值
   - "权限配置" — 将项目目录加入 settings.local.json，避免 acm 读代码/配置时弹授权提示
-  - "重新分析模板" — 重新指定模板文件并分析（含变值常量确认）
 
 **Question 3:**
-- header: "修改配置 (3/3)"
-- question: "想修改哪些项？"
+- header: "修改配置 (3/4)"
+- question: "第 3 组：模板与自动化配置，想修改哪些？"
 - multiSelect: true
 - options:
+  - "重新分析模板" — 重新指定模板文件并分析（含变值常量确认）
   - "版本更新提醒" — 切换是否在配置版本落后时提醒（当前: <remind_config_update>）
   - "可执行文件路径" — 配置/修改 C++ exe 路径，hack 生成后自动跑验证
-
   - "错误收集" — 切换是否自动收集编码错误模式
+
+**Question 4:**
+- header: "修改配置 (4/4)"
+- question: "第 4 组：其他配置，想修改哪些？"
+- multiSelect: true
+- options:
   - "变值常量" — 修改每题需要调整的常量列表
   - "以上都没有" — 不需要修改
 
-If the user has no template configured (`has_template: false`), hide "变值常量" option in Question 3. If that leaves Question 3 with only 3 options, keep it as-is (min 2 is satisfied).
+If the user has no template configured (`has_template: false`), hide "变值常量" option in Question 4. If that leaves Question 4 with only 1 option, keep both (min 2 is satisfied).
 
-**Important**: Send all 3 questions in a single `AskUserQuestion` call — not 3 separate calls. The user uses `←` `→` to flip between question pages, then submits everything at once.
+**Important**: Send all 4 questions in a single `AskUserQuestion` call — not 4 separate calls. The user uses `←` `→` to flip between question pages, then submits everything at once.
 
-After receiving answers, merge selections from all 3 questions. If the user selected "以上都没有" in Question 3, ignore all other selections and treat as "no changes". If nothing was selected across all 3 questions, say "没有改动。" and exit.
+After receiving answers, merge selections from all 4 questions. If the user selected "以上都没有" in Question 4, ignore all other selections and treat as "no changes". If nothing was selected across all 4 questions, say "没有改动。" and exit.
 
 ## Step 3: Apply Changes
 
@@ -138,7 +143,7 @@ For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + S
 For "可执行文件路径": use the same question flow as acm-setup Step 2b. Ask: 不配置 / 手动指定 / 尝试自动寻找. If manually specifying or re-running auto-find, use the current keywords from `code_paths`. Update `exe_paths`.
 
 
-For "错误收集": AskUserQuestion — header: "错误收集", question: "是否自动记录代码审查中发现的编码错误模式？", options: "不收集" (set `false`) / "自动收集" (set `true`). Update `collect_mistakes`.
+For "错误收集": AskUserQuestion — header: "错误收集", question: "代码审查发现 bug 后，如何记录错误模式？", options: "手动收集" (set `"manual"`), "自动总结，确认后收录" (set `"confirm"`), "自动静默收集" (set `"auto"`). Update `collect_mistakes`.
 
 For "评测机速度": use the same options as acm-setup Step 9. Update `time_limit_baseline`.
 
@@ -216,7 +221,7 @@ last_modified
 
 1. From the parsed old YAML frontmatter, keep only keys that appear in the whitelist above. Drop any others.
 2. Merge the new/changed values into the filtered config.
-3. Set `config_version` to `"0.2.10"` and `last_modified` to today's date.
+3. Set `config_version` to `"0.2.11"` and `last_modified` to today's date.
 4. Config body: always write `<!-- 模板摘要见 .claude/acm-trainer/template-summary.md -->` (a one-line marker, no template analysis content).
 5. If "重新分析模板" or "变值常量" was selected: write the updated template analysis to `.claude/acm-trainer/template-summary.md`.
 

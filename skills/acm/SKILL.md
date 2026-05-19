@@ -22,16 +22,16 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 - `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
 - `exe_paths` — keyword→exe path mapping for auto-verifying hack data output. Only meaningful for C++ code. Default: `{}` (skip verification).
 
-- `collect_mistakes` — whether to auto-save coding mistake patterns after code review, and reference past mistakes during future reviews. Default: `false`.
+- `collect_mistakes` — mistake collection mode: `"manual"` (only on explicit "记录这个错误"), `"confirm"` (auto-summarize then ask before saving), `"auto"` (auto-save silently). Default: `"manual"`. **Backward compat**: old bool configs — `true` → `"auto"`, `false` → `"manual"`.
 - `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
-- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.10"`.
+- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.11"`.
 - `remind_config_update` — whether to remind when config version is outdated. Default: `true`.
 - `auto_collect_solution` — whether to auto-save solution when user provides an editorial/solution. Default: `false`.
 - `last_modified` — last config edit date. Informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
-If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.10"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.10），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
+If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.11"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.10），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
 
 If `has_template` is `true` but `.claude/acm-trainer/template-summary.md` does not exist, mention: "模板摘要文件缺失，运行 `/acm-trainer:acm-config` → 重新分析模板 来生成。" (This handles migration from pre-0.2.13 configs where the template summary lived in the config body.)
 
@@ -195,14 +195,73 @@ If `exe_paths` has no entry for the keyword, or the entry is empty, skip verific
 
 ## Mistake Collection
 
-If `collect_mistakes` is `true`, after completing a code review that found bugs:
+`collect_mistakes` controls how coding mistake patterns are recorded. Three modes:
 
-1. Summarize the bugs into concise mistake patterns — one line each, categorized (段错误/越界, 逻辑反转, 未初始化, 溢出, 取模, 边界条件, etc.).
-2. Read `.claude/acm-trainer/mistakes.md` if it exists (create if not). Append new patterns, avoiding exact duplicates.
-3. Format each entry as: `- [<category>] <pattern description> — <date>`
-4. **During future code reviews**, read `.claude/acm-trainer/mistakes.md` and check whether the user's current code repeats any recorded patterns. If a match is found, flag it: "⚠️ 历史错误再现：<pattern> —— 你之前 <date> 犯过类似错误。"
+### Mode: `manual` (default)
 
-The user can review their mistake log by saying "查看错误记录" or "mistakes". The user can manually trigger saving with "记录这个错误".
+Do **not** auto-collect or auto-summarize. Only save mistakes when the user explicitly says "记录这个错误", "收藏这个bug", or similar. Manual triggers follow the same format as auto mode below.
+
+### Mode: `confirm`
+
+After a code review that found bugs, **you MUST** summarize the bugs into concise patterns — do this proactively without waiting for user prompting. Present the patterns to the user in a brief message:
+
+```
+代码审查发现以下错误模式，是否收录？
+
+1. [边界条件] 哨兵值设置错误 — min/max初始化用了非极值，当初始值意外小于/大于真实值时答案被截断
+2. [变量混淆] 参数使用了错误变量 — 算法推导中混淆了两个概念不同的量
+
+回复"收录"或"收1,2"来选中，或"不收"跳过。
+```
+
+Wait for the user's response. If they confirm (all or selected), save to `mistakes.md`.
+
+### Mode: `auto`
+
+After a code review that found bugs, **you MUST execute the saving step below automatically** — do NOT wait for user confirmation. The user enabled auto-collection explicitly; skipping it defeats the purpose.
+
+### Saving Format
+
+1. Summarize each bug found into a **generalizable** pattern — one line, not tied to the specific problem. Categories: 段错误/越界, 逻辑反转, 未初始化, 溢出, 取模, 边界条件, 变量混淆, 哨兵值设置错误, etc.
+2. Read `.claude/acm-trainer/mistakes.md` in the project root. If it doesn't exist, create it with:
+   ```markdown
+   # 常见编码错误记录
+   
+   自动收集，代码审查时参考。
+   
+   ```
+3. For each pattern, check if it already exists (same category + same description text).
+   - **New pattern**: append a new line.
+   - **Existing pattern**: update the count and last-seen date (do NOT create a duplicate line).
+4. Format each entry:
+   ```
+   - [<category>] <generalizable pattern description> — 次数: <N>, 首次: <YYYY-MM-DD>, 最近: <YYYY-MM-DD>
+   ```
+   - When creating: 次数 = 1, 首次 = 最近 = today.
+   - When updating existing: increment 次数, update 最近 to today, leave 首次 unchanged.
+5. Mention briefly: "已记录 N 个错误模式到知识库（其中 M 个为新增）。"
+
+**Good vs bad descriptions:**
+- ❌ `ans初始化为n导致n=3时错误` — 绑定具体题面，换个题看不懂
+- ✅ `哨兵值设置错误 — min/max维护的初始值用了具体数字而非INF/-INF`
+- ❌ `sqrt(x)应为sqrt(n)，小x时漏掉最优函数` — 脱离题面后无意义
+- ✅ `变量混淆 — 搜索半径/循环上限等算法参数使用了错误的变量`
+
+### Referencing Mistakes
+
+**Before or during** any code review (when `collect_mistakes` is not `"manual"`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
+
+```
+⚠️ 历史错误再现：[<category>] <pattern> — 你之前在 <date> 犯过类似错误（共 <count> 次）。
+```
+
+Only flag if the pattern genuinely matches — don't force false positives.
+
+### Manual Triggers
+
+- "记录这个错误" / "收藏这个bug" → save the most recently discussed bug pattern (works in all modes)
+- "查看错误记录" / "mistakes" → read and display `.claude/acm-trainer/mistakes.md`
+- "清空错误记录" → delete the file (confirm first)
 
 ## Template-Aware Code Review
 
