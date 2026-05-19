@@ -33,6 +33,8 @@ If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
 If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.10"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.10），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
 
+If `has_template` is `true` but `.claude/acm-trainer/template-summary.md` does not exist, mention: "模板摘要文件缺失，运行 `/acm-trainer:acm-config` → 重新分析模板 来生成。" (This handles migration from pre-0.2.13 configs where the template summary lived in the config body.)
+
 > **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
 
 ## Auto-Edit Behavior
@@ -204,10 +206,10 @@ The user can review their mistake log by saying "查看错误记录" or "mistake
 
 ## Template-Aware Code Review
 
-If `has_template` is true, read the template summary from the markdown body of the config file. When reviewing user code:
+If `has_template` is true, read `.claude/acm-trainer/template-summary.md` for the template analysis (aliases, macros, I/O, gotchas, per-problem constants). When reviewing user code:
 
 1. Skip reviewing the template portion (lines 1 to `template_boundary`). Focus on the user's actual code starting from `template_entry`.
-2. Check for template-specific gotchas recorded in the config.
+2. Check for template-specific gotchas recorded in the template summary.
 3. If `per_problem_constants` is non-empty, check whether any of those constants need adjustment for the current problem (e.g., `maxn` too small for given N).
 4. When suggesting fixes, show only the changed lines, not the full file.
 

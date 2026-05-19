@@ -21,7 +21,8 @@ README.md / README-EN.md        -- 用户文档
 .claude-plugin/changelog/0.2.X.md   -- 每次修改的完整背景和教训
 
 ##=== 用户侧 ===##
-.claude/acm-trainer.local.md    -- 用户配置文件（运行时读取，不在此插件内）
+.claude/acm-trainer.local.md           -- 用户配置文件（运行时读取，不在此插件内）
+.claude/acm-trainer/template-summary.md -- 模板摘要（代码审查时按需加载，不在此插件内）
 
 ## 需求→文件 速查
 | 我要做什么 | 读 |
@@ -92,6 +93,7 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-05-19 | 0.2.13 | 模板摘要拆分为独立文件；重新分析模板需diff对比 | .claude-plugin/changelog/0.2.13.md
 2026-05-13 | 0.2.12 | 移除duipai_exe_paths配置项；config_version→0.2.10；新增windows-exit-codes参考表 | .claude-plugin/changelog/0.2.12.md
 2026-05-12 | 0.2.8 | acm-config: 3次AskUserQuestion合并为1次← →翻页 | .claude-plugin/changelog/0.2.8.md
 2026-05-12 | 0.2.7 | 新增exe_paths配置+自动验证hack数据 | .claude-plugin/changelog/0.2.7.md

@@ -278,11 +278,17 @@ per_problem_constants:
 ---
 ```
 
-**Markdown body** (only if has_template or per_problem_constants):
+**Config body** — always write a minimal marker (no template analysis here):
+```
+<!-- 模板摘要见 .claude/acm-trainer/template-summary.md -->
+```
+
+**If `has_template: true`**: Also write `.claude/acm-trainer/template-summary.md`:
+
 ```markdown
 # Template Summary
 
-<template analysis from Step 5 — aliases, macros, I/O, debug, entry point>
+<template analysis from Step 6 — aliases, macros, I/O, debug, entry point>
 
 ## Gotchas
 <list of template-specific bugs to watch for>
@@ -291,7 +297,7 @@ per_problem_constants:
 <list of constants the user confirmed need per-problem adjustment, with default values>
 ```
 
-Write the file with Write tool. Do NOT use Bash for file creation.
+Write both files with Write tool. Do NOT use Bash for file creation.
 
 ## Step 12: Verify
 

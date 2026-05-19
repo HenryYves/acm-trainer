@@ -38,7 +38,7 @@ If user config has `has_template: true`, apply these rules:
 
 1. Skip reviewing lines 1 to `template_boundary` — these are template, not user code.
 2. Focus review on code after `template_entry`.
-3. Specifically check for template gotchas recorded in the config's template summary body. Common ones:
+3. Specifically check for template gotchas recorded in `.claude/acm-trainer/template-summary.md`. Common ones:
    - `#define max/min` macros — conflict with `std::max`/`std::min`, double-evaluation
    - `#define endl '\n'` — `cout << endl` does not flush
    - Custom I/O (`rd()`/`pr()`) — do not mix with `cin`/`cout`

@@ -133,7 +133,7 @@ For "自动修改代码": ask with the same question as acm-setup Step 4. Toggle
 
 For "收录题解": ask with the same question as acm-setup Step 4b. Toggle `auto_collect_solution`.
 
-For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + Step 6a of acm-setup), including per-problem constant confirmation.
+For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + Step 6a of acm-setup), including per-problem constant confirmation. After analysis, read the existing `.claude/acm-trainer/template-summary.md` (if it exists). Compare the new analysis against the old summary — show a diff of what changed (新增/变化/移除) before asking the user to confirm. Do NOT say "无变化" without doing a section-by-section comparison (aliases, macros, IO, gotchas, per-problem constants).
 
 For "可执行文件路径": use the same question flow as acm-setup Step 2b. Ask: 不配置 / 手动指定 / 尝试自动寻找. If manually specifying or re-running auto-find, use the current keywords from `code_paths`. Update `exe_paths`.
 
@@ -217,6 +217,7 @@ last_modified
 1. From the parsed old YAML frontmatter, keep only keys that appear in the whitelist above. Drop any others.
 2. Merge the new/changed values into the filtered config.
 3. Set `config_version` to `"0.2.10"` and `last_modified` to today's date.
-4. Preserve the markdown body (template summary) unchanged unless "重新分析模板" or "变值常量" was selected — in that case update the relevant sections.
+4. Config body: always write `<!-- 模板摘要见 .claude/acm-trainer/template-summary.md -->` (a one-line marker, no template analysis content).
+5. If "重新分析模板" or "变值常量" was selected: write the updated template analysis to `.claude/acm-trainer/template-summary.md`.
 
-Write with Write tool. Confirm: "配置已更新。"
+Write both files with Write tool. Confirm: "配置已更新。"
