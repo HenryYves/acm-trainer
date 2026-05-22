@@ -18,67 +18,57 @@ Read `.claude/acm-trainer.local.md`.
 
 ```
 === ACM Trainer 当前配置 ===
-配置版本: <config_version>（最新配置格式: 0.2.10）
+配置版本: <config_version>（最新: 0.2.13）
 最后修改: <last_modified>
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
 自动修改代码: <允许/不允许>
-收录题解: <手动/自动>
+收录题解: <手动/自动> 权限: <已配置/未配置>
 术语风格: <pure_chinese/mixed>
 编程语言: <cpp/py/match_code>
 模板代码: <有/无>
 变值常量: <无 or 常量名列表>
-评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom>
 可执行文件: <无 / N个关键词→exe路径>
-
-错误收集: <手动收集 / 自动总结确认 / 自动静默收集>
+错误收集: <手动/确认后收录/自动> 权限: <已配置/未配置>
+评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom>
 版本更新提醒: <是/否>
 =========================
 ```
 
-**Version check**: The latest config schema version is `0.2.10`.
+**Version check**: The latest config schema version is `0.2.13`.
 
-If `config_version` is `"0.2.11"` or newer → no action, proceed to Step 2.
+**Format check**: Regardless of config_version, validate each field's format. If `collect_mistakes` is a plain string or bool (not a mapping with `mode` key), or `auto_collect_solution` is a plain bool (not a mapping with `mode` key), the config has old-format fields that need migration. Even if `config_version` is current, old-format fields must be upgraded.
 
-If `config_version` is missing or older than `"0.2.11"`:
+If config_version < `"0.2.13"` **or** any field is in old format:
 
-1. Compare the parsed config against the complete field list (with defaults from acm-setup):
+1. Check for old-format fields specifically:
+   - `collect_mistakes` is a string or bool → needs migration to `{mode, perm}`
+   - `auto_collect_solution` is a bool → needs migration to `{mode, perm}`
+   
+   If any old-format fields found: show a message listing them, e.g., "检测到 N 个配置项格式过旧（collect_mistakes: bool→mapping, auto_collect_solution: bool→mapping），需更新。" Then AskUserQuestion with header "配置格式升级", single option "立即升级" (no skip — old format fields must be fixed). Convert old values: `collect_mistakes: true` → `{mode: "auto", perm: false}`, `false` → `{mode: "manual", perm: false}`, `"auto"/"manual"/"confirm"` string → `{mode: "<value>", perm: false}`. `auto_collect_solution: true` → `{mode: true, perm: false}`, `false` → `{mode: false, perm: false}`.
+
+2. Also check for missing fields against the complete field list (defaults from acm-setup):
 
    | Field | Setup Step | Default |
    |-------|-----------|---------|
-   | `code_location_mode` | Step 2 | `none` |
+   | `code_location_mode` | Step 2 | `"none"` |
    | `code_paths` | Step 2 | `{}` |
    | `progressive_hints` | Step 3 | `true` |
    | `auto_edit_code` | Step 4 | `false` |
-   | `auto_collect_solution` | Step 4b | `false` |
-   | `terminology` | Step 7 | `mixed` |
-   | `solution_language` | Step 8 | `cpp` |
+   | `auto_collect_solution` | Step 4b | `{mode: false, perm: false}` |
+   | `terminology` | Step 7 | `"mixed"` |
+   | `solution_language` | Step 8 | `"cpp"` |
    | `time_limit_baseline` | Step 9 | `100000000` |
    | `exe_paths` | Step 2b | `{}` |
-
-   | `collect_mistakes` | Step 4c | `false` |
+   | `collect_mistakes` | Step 4c | `{mode: "manual", perm: false}` |
    | `has_template` | Step 5 | `false` |
    | `remind_config_update` | — | `true` |
 
-   (`template_boundary`, `template_entry`, `per_problem_constants` 只在 `has_template: true` 时有意义；如果 `has_template` 为 true 但这些字段缺失，引导用户用 Step 2 的"重新分析模板"补全，不在版本升级中处理。)
+3. If only missing fields (no old-format): AskUserQuestion with header "配置升级", listing missing fields. Options: "是，逐项配置" / "跳过". Same flow as before.
 
-2. 找出用户配置中**缺失的字段**。忽略 `config_version`、`last_modified`（总是自动更新）。如果 `code_location_mode` 为 `none`，也忽略 `code_paths`。
+4. After all fixes, write config with `config_version: "0.2.13"`, `last_modified: <today>`. Then proceed to Step 2.
 
-3. **如果没有任何字段缺失**（只是版本号旧）：直接更新 `config_version` → `"0.2.9"`，`last_modified` → 今天日期。提示"配置内容已是最新，仅升级版本号。"然后进入 Step 2。
-
-4. **如果有字段缺失**：列出缺失字段及用途。然后 AskUserQuestion：
-   - header: "配置升级"
-   - question: "检测到旧版配置（版本: <current>）。以下 N 个配置项尚未设置：[列出缺失字段名 + 一句话用途]。是否逐项配置？"
-   - multiSelect: false
-   - options:
-     - "是，逐项配置" — 对每个缺失字段，用 acm-setup 对应步骤的问题引导选择（不重新走完整 setup，只问缺失的字段）
-     - "跳过" — 保留当前配置不变，版本号不升级（下次仍会提示）
-
-5. 如果选"是，逐项配置"：按 setup 步骤顺序，对每个缺失字段用对应的 AskUserQuestion 让用户选择。全部配置完后，写入配置文件：保留原有字段值 + 新字段值，`config_version` → `"0.2.9"`，`last_modified` → 今天日期。
-
-6. 如果选"跳过"：不修改配置，继续 Step 2。
-
-然后进入 Step 2。
+Then enter Step 2.
 
 ## Step 2: Choose What to Change
 
@@ -143,13 +133,36 @@ For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + S
 For "可执行文件路径": use the same question flow as acm-setup Step 2b. Ask: 不配置 / 手动指定 / 尝试自动寻找. If manually specifying or re-running auto-find, use the current keywords from `code_paths`. Update `exe_paths`.
 
 
-For "错误收集": AskUserQuestion — header: "错误收集", question: "代码审查发现 bug 后，如何记录错误模式？", options: "手动收集" (set `"manual"`), "自动总结，确认后收录" (set `"confirm"`), "自动静默收集" (set `"auto"`). Update `collect_mistakes`.
+For "错误收集": AskUserQuestion — header: "错误收集", question: "代码审查发现 bug 后，如何记录错误模式？", options: "手动收集" (set mode to `"manual"`), "自动总结，确认后收录" (set mode to `"confirm"`), "自动静默收集" (set mode to `"auto"`). Set `collect_mistakes.mode`. Keep existing `collect_mistakes.perm` if present, otherwise default `false`. Then, if mode is `"auto"` or `"confirm"` and perm is `false`, run the per-feature permission flow (see "Permission Follow-up" below).
+
+For "收录题解": AskUserQuestion with same question as acm-setup Step 4b. Set `auto_collect_solution.mode`. Keep existing `auto_collect_solution.perm` if present, otherwise default `false`. Then, if mode is `true` and perm is `false`, run the per-feature permission flow.
 
 For "评测机速度": use the same options as acm-setup Step 9. Update `time_limit_baseline`.
 
 For "版本更新提醒": AskUserQuestion — header: "版本提醒", question: "是否在配置版本落后时提醒更新？", options: "是，提醒我" (set `true`) / "不用提醒" (set `false`). Update `remind_config_update`.
 
-For "权限配置": ask the user to confirm. Same logic as acm-setup Step 13 but also configurable here independently. Adds both the project directory and the plugin cache root directory (so acm skill can read its `references/*.md` files without prompts).
+### Permission Follow-up
+
+After setting `collect_mistakes.mode` (to `"auto"`/`"confirm"`) or `auto_collect_solution.mode` (to `true`), if the corresponding `perm` is `false`, offer to configure write permission immediately:
+
+AskUserQuestion:
+- header: "权限配置"
+- question: "`<功能名>` 需要写入 `<文件路径>` 的权限，否则每次都会弹授权提示。是否现在配置？"
+- multiSelect: false
+- options:
+  - "是，自动配置" — add the Write permission to settings.local.json, then set `perm: true`
+  - "跳过" — keep `perm: false`, user will see permission warnings at runtime
+
+If "是，自动配置":
+1. Read `.claude/settings.local.json` in the project root. If it doesn't exist, start with `{}`.
+2. Add the appropriate Write rule to `permissions.allow`:
+   - For `collect_mistakes`: `"Write(.claude/acm-trainer/mistakes.md)"`
+   - For `auto_collect_solution`: `"Write(.claude/acm-trainer/solutions/*)"`
+3. Merge without duplicates, write back.
+4. Set the corresponding `perm` to `true`.
+5. Confirm: "`<功能名>` 的写入权限已配置。"
+
+For "权限配置": ask the user to confirm. Same logic as acm-setup Step 13 but also configurable here independently. Adds both the project directory and the plugin cache root directory (so acm skill can read its `references/*.md` files without prompts). This is the general read-permission setup, separate from the per-feature write permissions above.
 
 AskUserQuestion:
 - header: "权限配置"
@@ -221,8 +234,30 @@ last_modified
 
 1. From the parsed old YAML frontmatter, keep only keys that appear in the whitelist above. Drop any others.
 2. Merge the new/changed values into the filtered config.
-3. Set `config_version` to `"0.2.11"` and `last_modified` to today's date.
-4. Config body: always write `<!-- 模板摘要见 .claude/acm-trainer/template-summary.md -->` (a one-line marker, no template analysis content).
-5. If "重新分析模板" or "变值常量" was selected: write the updated template analysis to `.claude/acm-trainer/template-summary.md`.
+3. Set `config_version` to `"0.2.13"` and `last_modified` to today's date.
+4. **Write fields in this exact order** (matches acm/SKILL.md parsing order, so the model reads sequentially without jumping):
+
+```yaml
+code_location_mode
+code_paths
+progressive_hints
+auto_edit_code
+terminology
+solution_language
+has_template
+template_boundary        # only if has_template
+template_entry           # only if has_template
+per_problem_constants
+exe_paths
+collect_mistakes         # as mapping {mode, perm}
+auto_collect_solution    # as mapping {mode, perm}
+time_limit_baseline
+config_version
+remind_config_update
+last_modified
+```
+
+5. Config body: always write `<!-- 模板摘要见 .claude/acm-trainer/template-summary.md -->` (a one-line marker, no template analysis content).
+6. If "重新分析模板" or "变值常量" was selected: write the updated template analysis to `.claude/acm-trainer/template-summary.md`.
 
 Write both files with Write tool. Confirm: "配置已更新。"

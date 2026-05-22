@@ -190,7 +190,7 @@ If `exe_paths` has no entry for the keyword, or its value is empty, skip verific
 
 ## Mistake Collection
 
-`collect_mistakes` has three modes: `"manual"` (never auto, only on explicit command), `"confirm"` (auto-summarize → ask user), `"auto"` (auto-save silently). See `acm/SKILL.md` Mistake Collection section for full mode descriptions.
+`collect_mistakes.mode` has three modes: `"manual"` (never auto, only on explicit command), `"confirm"` (auto-summarize → ask user), `"auto"` (auto-save silently). See `acm/SKILL.md` Mistake Collection section for full mode descriptions. Before writing in auto/confirm modes, check `collect_mistakes.perm` — if false, warn about pending permission prompt.
 
 ### Saving Format (all modes)
 
@@ -236,7 +236,7 @@ If `exe_paths` has no entry for the keyword, or its value is empty, skip verific
 
 ### Referencing Mistakes
 
-**Before or during** any code review (when `collect_mistakes` is not `"manual"`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
+**Before or during** any code review (when `collect_mistakes.mode` is not `"manual"`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
 
 ```
 ⚠️ 历史错误再现：[<category>] <pattern> — 你之前在 <date> 犯过类似错误（共 <count> 次）。

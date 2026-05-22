@@ -9,31 +9,40 @@ Competitive programming tutor in Chinese. Covers problem solving, code review, a
 
 ## Startup
 
-**First**, use Read to read `.claude/acm-trainer.local.md` in the project root (current working directory). This file is always at this exact path after setup — do NOT search for it, do NOT use Glob. If the Read fails (file doesn't exist), stop and tell the user to run `/acm-trainer:acm-setup` first. Parse its YAML frontmatter for the fields listed below. **For each field, use the documented default if the field is missing** (old configs may lack newer fields):
+**First**, use Read to read `.claude/acm-trainer.local.md` in the project root (current working directory). This file is always at this exact path after setup — do NOT search for it, do NOT use Glob. If the Read fails (file doesn't exist), stop and tell the user to run `/acm-trainer:acm-setup` first. Parse its YAML frontmatter for the fields listed below. Each field has an expected format and a default. **If a field is in an unrecognized format** (e.g., plain string where a mapping is expected, old bool where string is expected), tell the user "配置项 `<name>` 格式过旧，运行 `/acm-trainer:acm-config` 更新。" and fall back to the documented default for that field.
 
 **After config is parsed**, route to the appropriate reference file per Scenario Routing below. Do NOT pre-load reference files (references/*.md) before the config is read — loading them early wastes tokens if the scenario doesn't need them.
 
-- `code_location_mode` / `code_paths` — where user code files are (`none`, `single`, `per_problem`, `files`). Default: `code_location_mode: none`.
-- `progressive_hints` — whether to default to progressive hints. Default: `true`.
-- `auto_edit_code` — whether to auto-edit/create code files. Default: `false`.
-- `terminology` — `pure_chinese` or `mixed`. Default: `mixed`.
-- `solution_language` — `cpp`, `py`, or `match_code`. Default: `cpp` (when no user code present).
-- `has_template` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`. (`template_path` removed in 0.2.5 — was never read by the skill after setup.)
-- `per_problem_constants` — list of constants that need per-problem adjustment (name, line, default_value). Default: `[]` (empty list).
-- `exe_paths` — keyword→exe path mapping for auto-verifying hack data output. Only meaningful for C++ code. Default: `{}` (skip verification).
+Fields are listed in config file order. Parse in this order (use default only if field is absent, not if format is wrong):
 
-- `collect_mistakes` — mistake collection mode: `"manual"` (only on explicit "记录这个错误"), `"confirm"` (auto-summarize then ask before saving), `"auto"` (auto-save silently). Default: `"manual"`. **Backward compat**: old bool configs — `true` → `"auto"`, `false` → `"manual"`.
-- `time_limit_baseline` — O(N) safe N in 1 second for complexity analysis. Default: `100000000` (1e8).
-- `config_version` — config schema version. Only changes when config format changes (not every plugin release). Default: `"0.2.11"`.
-- `remind_config_update` — whether to remind when config version is outdated. Default: `true`.
-- `auto_collect_solution` — whether to auto-save solution when user provides an editorial/solution. Default: `false`.
-- `last_modified` — last config edit date. Informational only.
+- `code_location_mode` — `"none"`, `"single"`, `"per_problem"`, or `"files"`. Default: `"none"`.
+- `code_paths` — map of keyword→absolute path. Only meaningful when `code_location_mode` is not `"none"`. Default: `{}`.
+- `progressive_hints` — bool. Default: `true`.
+- `auto_edit_code` — bool. Default: `false`.
+- `terminology` — `"pure_chinese"` or `"mixed"`. Default: `"mixed"`.
+- `solution_language` — `"cpp"`, `"py"`, or `"match_code"`. Default: `"cpp"` (when no user code present).
+- `has_template` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`.
+- `per_problem_constants` — list of objects with keys `name`, `line`, `default_value`. Default: `[]`.
+- `exe_paths` — map of keyword→exe path. Default: `{}` (skip hack verification).
+- `collect_mistakes` — mapping `{mode, perm}`. `mode`: `"manual"` / `"confirm"` / `"auto"`. `perm`: bool, whether Write permission for `.claude/acm-trainer/mistakes.md` is configured. Default: `{mode: "manual", perm: false}`. If value is a plain string or bool (old format), warn and fall back to default.
+- `auto_collect_solution` — mapping `{mode, perm}`. `mode`: bool, whether to auto-save solutions. `perm`: bool, whether Write permission for `.claude/acm-trainer/solutions/` is configured. Default: `{mode: false, perm: false}`. If value is a plain bool (old format), warn and fall back to default.
+- `time_limit_baseline` — int, O(N) safe N per second. Default: `100000000` (1e8).
+- `config_version` — string, config schema version. Default: `"0.2.13"`.
+- `remind_config_update` — bool. Default: `true`.
+- `last_modified` — date string, informational only.
 
 If config does not exist, suggest running `/acm-trainer:acm-setup`.
 
-If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.11"` (the latest config schema version), mention: "检测到旧版配置（版本: <current>，最新配置格式: 0.2.10），可运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip the version check entirely.
+If `remind_config_update` is `true` and `config_version` is missing or older than `"0.2.13"`, mention: "检测到旧版配置（版本: <current>，最新: 0.2.13），运行 `/acm-trainer:acm-config` 补全。" If `remind_config_update` is `false`, skip.
 
-If `has_template` is `true` but `.claude/acm-trainer/template-summary.md` does not exist, mention: "模板摘要文件缺失，运行 `/acm-trainer:acm-config` → 重新分析模板 来生成。" (This handles migration from pre-0.2.13 configs where the template summary lived in the config body.)
+If `has_template` is `true` but `.claude/acm-trainer/template-summary.md` does not exist, mention: "模板摘要文件缺失，运行 `/acm-trainer:acm-config` → 重新分析模板 来生成。"
+
+### Permission Warnings
+
+After parsing, check perm flags. If a feature's mode is active but perm is false, warn (once per session):
+
+- `collect_mistakes.mode` in `{"auto", "confirm"}` with `collect_mistakes.perm: false` → "⚠️ 错误收集需要 `.claude/acm-trainer/mistakes.md` 的写入权限，运行 `/acm-trainer:acm-config` → 权限配置 来修复。"
+- `auto_collect_solution.mode: true` with `auto_collect_solution.perm: false` → "⚠️ 自动收录题解需要 `.claude/acm-trainer/solutions/` 的写入权限，运行 `/acm-trainer:acm-config` → 权限配置 来修复。"
 
 > **修改本插件时**：如果要编辑 acm-trainer 的 skill 文件，先读取 `.claude-plugin/MODIFICATION.md` 了解交叉引用清单和更新规则。
 
@@ -116,7 +125,7 @@ complexity: <time/space>
 
 ### Saving a solution
 
-Triggered by: "收录这道题", "记录题解", "收藏一下", "保存这个思路", etc. Also, if config `auto_collect_solution` is `true` and the user provides a solution/editorial, automatically trigger collection.
+Triggered by: "收录这道题", "记录题解", "收藏一下", "保存这个思路", etc. Also, if config `auto_collect_solution.mode` is `true` and the user provides a solution/editorial, automatically trigger collection.
 
 1. **Duplicate check first**: scan `index.md` for the same problem name or very similar tag+constraint combination. If already collected, say "这道题好像已经收录过了" and skip.
 2. Summarize the solution — extract the key insight, algorithm, complexity, and a minimal code skeleton. **Must include the "如何想到" guide** — a chain of reasoning from constraints/signals to the approach.
@@ -195,7 +204,7 @@ If `exe_paths` has no entry for the keyword, or the entry is empty, skip verific
 
 ## Mistake Collection
 
-`collect_mistakes` controls how coding mistake patterns are recorded. Three modes:
+`collect_mistakes.mode` controls how coding mistake patterns are recorded. Three modes:
 
 ### Mode: `manual` (default)
 
@@ -219,6 +228,8 @@ Wait for the user's response. If they confirm (all or selected), save to `mistak
 ### Mode: `auto`
 
 After a code review that found bugs, **you MUST execute the saving step below automatically** — do NOT wait for user confirmation. The user enabled auto-collection explicitly; skipping it defeats the purpose.
+
+**Before writing**: check `collect_mistakes.perm`. If it's `false`, the user hasn't configured write permission yet — the Write call will trigger a permission prompt. Mention this to the user ("建议运行 `/acm-trainer:acm-config` → 权限配置 来消除弹窗"), then proceed with the write anyway (it will prompt but user can approve).
 
 ### Saving Format
 
@@ -249,7 +260,7 @@ After a code review that found bugs, **you MUST execute the saving step below au
 
 ### Referencing Mistakes
 
-**Before or during** any code review (when `collect_mistakes` is not `"manual"`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
+**Before or during** any code review (when `collect_mistakes.mode` is not `"manual"`), read `.claude/acm-trainer/mistakes.md`. Scan for patterns that match the current code. If a match is found, flag it:
 
 ```
 ⚠️ 历史错误再现：[<category>] <pattern> — 你之前在 <date> 犯过类似错误（共 <count> 次）。

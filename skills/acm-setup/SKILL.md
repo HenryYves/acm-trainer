@@ -98,7 +98,7 @@ AskUserQuestion:
   - "手动指定（默认）" — 只有你说"收录"/"记录题解"等关键词时才收录
   - "自动收录" — 你贴出题解或解题思路时自动收录，重复的自动跳过
 
-Set `auto_collect_solution: false` for "手动指定", `true` for "自动收录".
+Set `auto_collect_solution: {mode: false, perm: false}` for "手动指定", `{mode: true, perm: false}` for "自动收录". (perm starts false; user configures it later via acm-config.)
 
 ## Step 4c: Collect Mistakes
 
@@ -111,7 +111,7 @@ AskUserQuestion:
   - "自动总结，确认后收录" — 代码审查后自动总结为错误模式，列出后问你是否收录
   - "自动静默收集" — 代码审查后自动总结并直接保存，不做二次确认
 
-Set `collect_mistakes: "manual"` for "手动收集", `"confirm"` for "自动总结确认", `"auto"` for "自动静默收集".
+Set `collect_mistakes: {mode: "manual", perm: false}` for "手动收集", `{mode: "confirm", perm: false}` for "自动总结确认", `{mode: "auto", perm: false}` for "自动静默收集". (perm starts false; user configures it later via acm-config.)
 
 ## Step 5: Template Code
 
@@ -259,14 +259,18 @@ code_paths:
 exe_paths:
   <keyword>: <path>  # optional, for C++ hack verification
 
-collect_mistakes: <"manual"|"confirm"|"auto">
+collect_mistakes:
+  mode: <"manual"|"confirm"|"auto">
+  perm: false
+auto_collect_solution:
+  mode: <true|false>
+  perm: false
 progressive_hints: <true|false>
 auto_edit_code: <true|false>
-auto_collect_solution: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
-config_version: "0.2.11"
+config_version: "0.2.13"
 remind_config_update: true
 last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>
