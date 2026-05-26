@@ -335,11 +335,6 @@ If user chooses "不用了", skip to done.
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(ls *)",
-      "Bash(dir *)",
-      "Glob(**/*)"
-    ],
     "additionalDirectories": [
       "<current working directory with backslashes escaped>",
       "<plugin cache root with backslashes escaped>"
@@ -347,6 +342,8 @@ If user chooses "不用了", skip to done.
   }
 }
 ```
+
+`additionalDirectories` covers all Read operations — no need for broad `Glob` or `Bash` entries.
 
 3. If existing `permissions.allow` already has entries, merge — do NOT replace. If existing `permissions.additionalDirectories` already has entries, merge — do NOT replace.
 4. Write the merged result back to `.claude/settings.local.json` with the Write tool.

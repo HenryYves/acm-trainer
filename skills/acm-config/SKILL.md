@@ -66,7 +66,18 @@ If config_version < `"0.2.13"` **or** any field is in old format:
 
 3. If only missing fields (no old-format): AskUserQuestion with header "配置升级", listing missing fields. Options: "是，逐项配置" / "跳过". Same flow as before.
 
-4. After all fixes, write config with `config_version: "0.2.13"`, `last_modified: <today>`. Then proceed to Step 2.
+4. After all fixes, write config with `config_version: "0.2.13"`, `last_modified: <today>`.
+
+### Auto Permission Check
+
+After format upgrade (and ONLY during format upgrade — not on every Config run), check if any features have mode requiring write permission but `perm` is `false`:
+
+- `collect_mistakes.mode` in `{"auto", "confirm"}` with `collect_mistakes.perm: false`
+- `auto_collect_solution.mode: true` with `auto_collect_solution.perm: false`
+
+If any, run the Permission Follow-up flow (see Step 3) for each. Then also offer general read permissions ("权限配置" from Step 2 Question 2).
+
+**If user chooses "跳过"**: keep `perm: false`. This records the user's choice — do NOT re-offer the same feature later in this session, and do NOT auto-offer on future Config runs (format upgrade only happens once).
 
 Then enter Step 2.
 
@@ -151,7 +162,7 @@ AskUserQuestion:
 - multiSelect: false
 - options:
   - "是，自动配置" — add the Write permission to settings.local.json, then set `perm: true`
-  - "跳过" — keep `perm: false`, user will see permission warnings at runtime
+  - "跳过" — keep `perm: false` (records user's choice; do NOT re-offer for this feature in this session)
 
 If "是，自动配置":
 1. Read `.claude/settings.local.json` in the project root. If it doesn't exist, start with `{}`.
@@ -179,11 +190,6 @@ If "是，自动配置":
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(ls *)",
-      "Bash(dir *)",
-      "Glob(**/*)"
-    ],
     "additionalDirectories": [
       "<current working directory with backslashes escaped>",
       "<plugin cache root with backslashes escaped>"
@@ -191,6 +197,8 @@ If "是，自动配置":
   }
 }
 ```
+
+`additionalDirectories` covers all Read operations (config, code files, reference files) — no need for broad `Glob` or `Bash` entries. Write permissions are handled separately per-feature (see Permission Follow-up).
 
 The plugin cache root is the `acm-trainer` directory — go up 3 levels from this skill file's directory (`<version>/skills/acm-config/`) to reach it. For a typical install: `~/.claude/plugins/cache/Yves-plugin/acm-trainer/`.
 
