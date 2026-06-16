@@ -104,6 +104,7 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-06-16 | 0.2.18 | exe_paths多路径+perm主动同步 | .claude-plugin/changelog/0.2.18.md
 2026-05-26 | 0.2.17 | 权限自动配置+收紧+拒绝记忆 | .claude-plugin/changelog/0.2.17.md
 2026-05-22 | 0.2.16 | 配置mapping格式+perm跟踪+acm-data导入导出；无向后兼容；config_version→0.2.13 | .claude-plugin/changelog/0.2.16.md
 2026-05-19 | 0.2.15 | collect_mistakes三态枚举(manual/confirm/auto)；错误描述泛化；config_version→0.2.11 | .claude-plugin/changelog/0.2.15.md

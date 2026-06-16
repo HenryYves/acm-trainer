@@ -23,7 +23,7 @@ Fields are listed in config file order. Parse in this order (use default only if
 - `solution_language` — `"cpp"`, `"py"`, or `"match_code"`. Default: `"cpp"` (when no user code present).
 - `has_template` / `template_boundary` / `template_entry` — template info. Default: `has_template: false`.
 - `per_problem_constants` — list of objects with keys `name`, `line`, `default_value`. Default: `[]`.
-- `exe_paths` — map of keyword→exe path. Default: `{}` (skip hack verification).
+- `exe_paths` — map of keyword→exe path list. Each value can be a single path string (old format, auto-treated as single-element list) or a list of path strings. Default: `{}` (skip hack verification).
 - `collect_mistakes` — mapping `{mode, perm}`. `mode`: `"manual"` / `"confirm"` / `"auto"`. `perm`: bool, whether Write permission for `.claude/acm-trainer/mistakes.md` is configured. Default: `{mode: "manual", perm: false}`. If value is a plain string or bool (old format), warn and fall back to default.
 - `auto_collect_solution` — mapping `{mode, perm}`. `mode`: bool, whether to auto-save solutions. `perm`: bool, whether Write permission for `.claude/acm-trainer/solutions/` is configured. Default: `{mode: false, perm: false}`. If value is a plain bool (old format), warn and fall back to default.
 - `time_limit_baseline` — int, O(N) safe N per second. Default: `100000000` (1e8).
@@ -156,11 +156,14 @@ If the user refers to a file by path directly, Read that path.
 
 After generating hack data during code review, if `exe_paths` contains an entry for the current keyword (the one the user used to refer to their code), auto-verify the hack by running the exe:
 
-1. Write the hack input to a temp file (e.g., `/tmp/acm_hack_in.txt`).
-2. Run via Bash: `<exe_path> < /tmp/acm_hack_in.txt 2>&1; echo "EXIT:$?"` (capture both stdout and the exit code marker).
-3. **Interpret the exit code** per the table below BEFORE comparing output. If the program crashed, report the crash type instead of treating it as wrong output.
-4. If the program ran successfully (exit 0), capture stdout and compare with expected output.
-5. Report: `✅ 验证通过`, `❌ 验证失败: 期望=X, 实测=Y`, or `💥 崩溃 (<type>)`.
+1. **Resolve paths**: Get the value for the keyword. If it's a string, treat as a single-element list. If it's already a list, use as-is.
+2. **Pick the newest**: For each path in the list, check if the file exists via `stat`. Among the existing ones, pick the one with the newest modification time. If none exist, skip verification (warn: "exe 不存在").
+3. **Freshness check**: Compare the newest exe's modification time with the source `.cpp` file's modification time. If the exe is older than the source → warn: "⚠️ exe 比源代码旧，可能未重新编译。建议重新编译后再验证。" and skip verification for that hack.
+4. Write the hack input to a temp file (e.g., `/tmp/acm_hack_in.txt`).
+5. Run via Bash: `<selected_exe> < /tmp/acm_hack_in.txt 2>&1; echo "EXIT:$?"` (capture both stdout and the exit code marker).
+6. **Interpret the exit code** per the table below BEFORE comparing output. If the program crashed, report the crash type instead of treating it as wrong output.
+7. If the program ran successfully (exit 0), capture stdout and compare with expected output.
+8. Report: `✅ 验证通过`, `❌ 验证失败: 期望=X, 实测=Y`, or `💥 崩溃 (<type>)`.
 
 ### Exit Code Interpretation
 
@@ -192,10 +195,10 @@ When running a C++ exe compiled with MSVC on Windows via bash, exit codes carry 
 
 ### Exe Freshness Check
 
-Before running any exe, verify it is up-to-date with the source:
+Before running any exe, pick the newest exe from the configured paths (see code-review.md Hack Verification for the full multi-path resolution flow), then verify it is up-to-date with the source:
 
-- Read the exe's modification time (e.g., `stat` command) and compare with the source `.cpp` file's modification time.
-- If the exe is older than the source → warn: "⚠️ exe 比源代码旧，可能未重新编译。建议重新编译后再验证。" Then skip verification for that hack (output may be from old code).
+- Read the selected exe's modification time (e.g., `stat` command) and compare with the source `.cpp` file's modification time.
+- If the newest exe is older than the source → warn: "⚠️ 所有 exe 都比源代码旧，可能未重新编译。建议重新编译后再验证。" Then skip verification for that hack (output may be from old code).
 
 Do NOT run stale exe silently — the output would be misleading.
 

@@ -113,24 +113,51 @@ After the bug scan, produce hack test cases. Each hack must target a specific bu
 1. **Target-specific**: Each hack precisely triggers one identified bug. If you found integer overflow, construct a case that overflows. If you found off-by-one, construct a case at the boundary.
 2. **Follow the problem's input format**: The user should be able to copy-paste directly into stdin / the OJ test panel.
 3. **Keep cases small** (≤ 20 elements for arrays) for manual verification. If the bug only manifests at large scale (e.g., overflow at N > 2×10⁵), show a conceptual case demonstrating the math plus a smaller runnable case.
+4. **NO extra labels in data blocks**: The input and output blocks must contain ONLY the raw data in OJ format. Do NOT add Chinese labels like "输入:"、"期望:"、"输出:" before the data — these make the input non-copy-pasteable. The only allowed labels are the `//` comment lines in the hack template below, which are outside the data blocks.
 
 ### Hack Format
 
 ```
-### Hack #N: <bug name — what bug this triggers>
+### Hack #N: <bug name>
 
-// 输入
-<copy-pasteable input in the problem's format>
+// 输入（可直接复制到 OJ / stdin）
+<raw input — EXACT problem format, no Chinese labels>
 
 // 期望输出
-<correct answer>
+<correct answer — raw value only>
 
-// 你的代码实际输出
-<what the buggy code produces, or error message>
+// 实际输出
+<what the buggy code produces>
 
 // 触发位置
-<file:line or logic section hit by this hack>
+<file:line or logic section>
 ```
+
+The `//` lines are markdown comments that stay in the output for readability. The data blocks between them must be pure raw data — the user can select and copy without editing.
+
+**Correct example:**
+```
+### Hack #1: sort 破坏原序
+
+// 输入
+4 2
+1 100 2 99
+
+// 期望输出
+101
+
+// 实际输出
+3
+```
+
+**Wrong (DO NOT do this):**
+```
+输入:
+4 2
+1 100 2 99
+期望: 101
+```
+The labels "输入:" and "期望:" would be included when the user copy-pastes.
 
 ### Construction Strategies by Bug Type
 
@@ -144,17 +171,20 @@ After the bug scan, produce hack test cases. Each hack must target a specific bu
 
 After generating all hack cases, check `exe_paths` from config. If the current keyword (the one the user used to refer to their code, e.g., "A") has an entry in `exe_paths`, auto-verify each hack:
 
-1. **Freshness check first**: Before running, compare the exe's modification time with the source `.cpp` file's modification time (the file at `code_paths[keyword]`). Use `stat` or equivalent to get both timestamps.
-   - If exe is older → warn: "⚠️ <keyword>.exe 比源代码旧，可能未重新编译。建议重新编译后再验证。" Then skip verification (stale output is misleading).
-   - If exe is newer or same → proceed.
+1. **Resolve paths**: Get the value for the keyword. If it's a string, treat as a single-element list. If it's already a list, use as-is.
+2. **Pick the newest**: For each path in the list, check if the file exists (e.g., `test -f "<path>"`). Among the existing ones, compare modification times with `stat -c %Y "<path>"`. Pick the one with the highest timestamp. If none exist, skip verification with a brief note: "exe 未找到（已检查 N 个路径）".
+3. **Freshness check**: Compare the newest exe's modification time with the source `.cpp` file's modification time (the file at `code_paths[keyword]`).
+   - If the newest exe is older than the source → warn: "⚠️ 所有 exe 都比源代码旧，可能未重新编译。建议重新编译后再验证。" Then skip verification (stale output is misleading).
+   - If the newest exe is newer or same → proceed.
+   - If multiple paths had newer exes, the freshness check still only compares the single newest one against the source.
 
-2. Write the hack input to a temp file at `/tmp/acm_hack_in.txt`.
-3. Run the exe via Bash, capturing both stdout and exit code:
+4. Write the hack input to a temp file at `/tmp/acm_hack_in.txt`.
+5. Run the selected exe via Bash, capturing both stdout and exit code:
    ```
-   <exe_path> < /tmp/acm_hack_in.txt 2>&1; echo "EXIT:$?"
+   <selected_exe_path> < /tmp/acm_hack_in.txt 2>&1; echo "EXIT:$?"
    ```
-   (On Windows with PowerShell fallback: `Get-Content /tmp/acm_hack_in.txt | <exe_path> 2>&1; echo "EXIT:$?"`)
-4. Extract the exit code from the `EXIT:N` marker. Interpret it:
+   (On Windows with PowerShell fallback: `Get-Content /tmp/acm_hack_in.txt | <selected_exe_path> 2>&1; echo "EXIT:$?"`)
+6. Extract the exit code from the `EXIT:N` marker. Interpret it:
 
 ### Exit Code Interpretation
 
@@ -171,8 +201,8 @@ When running a C++ exe compiled with MSVC on Windows via bash:
 
 **When the program crashes**: Report as `💥 崩溃 (<诊断类型>)` rather than treating it as wrong output. Include the exit code and suggested cause. Example: "💥 崩溃: 段错误 (exit -1073741819) — 很可能是数组越界或空指针。"
 
-5. If the program ran successfully (exit 0), capture stdout. Trim whitespace from both stdout and expected output before comparing.
-6. Append to each hack entry:
+7. If the program ran successfully (exit 0), capture stdout. Trim whitespace from both stdout and expected output before comparing.
+8. Append to each hack entry:
    ```
    // 验证: ✅ 通过
    ```
@@ -185,7 +215,7 @@ When running a C++ exe compiled with MSVC on Windows via bash:
    // 验证: 💥 崩溃 — 段错误 (exit -1073741819), 很可能是数组越界
    ```
 
-If `exe_paths` has no entry for the keyword, or its value is empty, skip verification silently. Do NOT fabricate paths or guess exe locations — only use the configured path.
+If `exe_paths` has no entry for the keyword, or the entry is an empty list, skip verification silently. Do NOT fabricate paths or guess exe locations — only use the configured paths.
 
 
 ## Mistake Collection

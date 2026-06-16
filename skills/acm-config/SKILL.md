@@ -28,7 +28,7 @@ Read `.claude/acm-trainer.local.md`.
 编程语言: <cpp/py/match_code>
 模板代码: <有/无>
 变值常量: <无 or 常量名列表>
-可执行文件: <无 / N个关键词→exe路径>
+可执行文件: <无 / N个关键词(N个路径)>
 错误收集: <手动/确认后收录/自动> 权限: <已配置/未配置>
 评测机速度: <1e8 / 5e7 / 3e7 / 2e8 / custom>
 版本更新提醒: <是/否>
@@ -36,6 +36,13 @@ Read `.claude/acm-trainer.local.md`.
 ```
 
 **Version check**: The latest config schema version is `0.2.13`.
+
+**Perm sync**: Read `.claude/settings.local.json`. Check the `permissions.allow` array for write permissions and sync the config's `perm` flags to match reality:
+- If `"Write(.claude/acm-trainer/mistakes.md)"` is in `permissions.allow` → set `collect_mistakes.perm: true` (regardless of current value)
+- If `"Write(.claude/acm-trainer/solutions/*)"` is in `permissions.allow` → set `auto_collect_solution.perm: true` (regardless of current value)
+- If not found → keep current `perm` value (may be `false` or absent)
+
+This runs on EVERY Config invocation, not just format upgrades — it prevents stale `perm: false` when the user manually added permissions. Do NOT mention this sync to the user unless a stale value was corrected (then note: "已同步权限状态：<feature> perm false→true").
 
 **Format check**: Regardless of config_version, validate each field's format. If `collect_mistakes` is a plain string or bool (not a mapping with `mode` key), or `auto_collect_solution` is a plain bool (not a mapping with `mode` key), the config has old-format fields that need migration. Even if `config_version` is current, old-format fields must be upgraded.
 
@@ -141,7 +148,23 @@ For "收录题解": ask with the same question as acm-setup Step 4b. Toggle `aut
 
 For "重新分析模板": re-run the full template analysis (Step 5 + Step 6 + Step 6a of acm-setup), including per-problem constant confirmation. After analysis, read the existing `.claude/acm-trainer/template-summary.md` (if it exists). Compare the new analysis against the old summary — show a diff of what changed (新增/变化/移除) before asking the user to confirm. Do NOT say "无变化" without doing a section-by-section comparison (aliases, macros, IO, gotchas, per-problem constants).
 
-For "可执行文件路径": use the same question flow as acm-setup Step 2b. Ask: 不配置 / 手动指定 / 尝试自动寻找. If manually specifying or re-running auto-find, use the current keywords from `code_paths`. Update `exe_paths`.
+For "可执行文件路径": present current state for each keyword (show all paths, not just one). Then AskUserQuestion:
+- header: "可执行文件"
+- question: "当前关键词及路径：<list current keywords with their paths>. 要如何修改？"
+- options:
+  - "添加路径" — 选择一个关键词，追加一个 exe 路径
+  - "移除路径" — 选择一个关键词，从列表中删除某个路径
+  - "重新自动寻找" — 对某个关键词重新搜索所有位置（替换该关键词的路径列表）
+  - "手动重新指定" — 清空某个关键词的路径列表，手动输入新路径
+
+For "添加路径": ask which keyword, then ask for the absolute path. Append to that keyword's list.
+For "移除路径": ask which keyword, then list its paths for user to pick which to remove. If only 1 path left, warn "至少保留一个路径，或选"不配置"清空全部"。
+For "重新自动寻找": use the same logic as acm-setup Step 2b auto-find. Search all standard locations, replace that keyword's list with all found paths.
+For "手动重新指定": ask which keyword, then ask for one or more comma-separated paths. Replace that keyword's list.
+
+After any change, the new list is ordered by modification time (newest first) for readability — runtime always picks the newest anyway.
+
+If user chooses "不配置": clear all exe_paths (set to `{}`).
 
 
 For "错误收集": AskUserQuestion — header: "错误收集", question: "代码审查发现 bug 后，如何记录错误模式？", options: "手动收集" (set mode to `"manual"`), "自动总结，确认后收录" (set mode to `"confirm"`), "自动静默收集" (set mode to `"auto"`). Set `collect_mistakes.mode`. Keep existing `collect_mistakes.perm` if present, otherwise default `false`. Then, if mode is `"auto"` or `"confirm"` and perm is `false`, run the per-feature permission flow (see "Permission Follow-up" below).
@@ -173,32 +196,34 @@ If "是，自动配置":
 4. Set the corresponding `perm` to `true`.
 5. Confirm: "`<功能名>` 的写入权限已配置。"
 
-For "权限配置": ask the user to confirm. Same logic as acm-setup Step 13 but also configurable here independently. Adds both the project directory and the plugin cache root directory (so acm skill can read its `references/*.md` files without prompts). This is the general read-permission setup, separate from the per-feature write permissions above.
+For "权限配置": ask the user to confirm. Same logic as acm-setup Step 13 but also configurable here independently. Configures permissions based on what the user actually needs (not all unconditionally):
+
+**Always added** (needed for any acm operation):
+- `additionalDirectories`: project dir + plugin cache root (Read access)
+
+**Conditional — only if `exe_paths` is non-empty** (hack verification needs these):
+- `Bash(stat *)` — comparing exe vs source timestamps
+- `Bash(*.exe *)` — running compiled exe for hack verification
+
+Write permissions for mistake collection and solution collection are handled separately via "Permission Follow-up" above, not here.
 
 AskUserQuestion:
 - header: "权限配置"
-- question: "是否将项目目录加入 .claude/settings.local.json？之后 acm 读代码文件、读配置不会再弹出授权提示。（不影响其他项目）"
+- question: "是否自动配置权限？① 读代码/配置（必需）<if exe_paths non-empty: + ② 比较 exe 时间戳 ③ 运行 exe 验证 hack>。之后不再弹授权提示。（不影响其他项目）"
 - multiSelect: false
 - options:
-  - "是，自动配置" — 自动把项目目录加入权限白名单
+  - "是，自动配置" — 自动添加所需权限
   - "不用了" — 跳过
 
 If "是，自动配置":
-1. Read `.claude/settings.local.json` in the project root (current working directory). If it doesn't exist, start with `{}`.
-2. Merge the following into the existing JSON (preserve all existing settings, merge arrays without duplicates):
-
-```json
-{
-  "permissions": {
-    "additionalDirectories": [
-      "<current working directory with backslashes escaped>",
-      "<plugin cache root with backslashes escaped>"
-    ]
-  }
-}
-```
-
-`additionalDirectories` covers all Read operations (config, code files, reference files) — no need for broad `Glob` or `Bash` entries. Write permissions are handled separately per-feature (see Permission Follow-up).
+1. Read `.claude/settings.local.json` in the project root. If it doesn't exist, start with `{}`.
+2. Build the permission block. Start with Read permissions:
+   ```json
+   {"permissions": {"additionalDirectories": ["<project dir>", "<plugin cache root>"]}}
+   ```
+3. If `exe_paths` is non-empty, also add to `permissions.allow`: `"Bash(stat *)"`, `"Bash(*.exe *)"`.
+4. Merge into existing JSON (preserve all existing settings, merge arrays without duplicates).
+5. Write back. Confirm what was added: "已配置权限：Read 目录<if exe: + stat + exe 运行>"。
 
 The plugin cache root is the `acm-trainer` directory — go up 3 levels from this skill file's directory (`<version>/skills/acm-config/`) to reach it. For a typical install: `~/.claude/plugins/cache/Yves-plugin/acm-trainer/`.
 

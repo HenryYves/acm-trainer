@@ -60,12 +60,13 @@ AskUserQuestion:
 - `./build/Debug/{name}.exe`
 - `./bin/{name}.exe`
 
-Use Glob to search. Results:
-- 0 found → ask user to manually input the path for that keyword
-- 1 found → adopt it, record in `exe_paths`
-- multiple found → ask user to pick one via AskUserQuestion
+Use Glob to find ALL matching exe files (not just the first). Sort by modification time descending (newest first). Results:
+- 0 found → ask user to manually input path(s) for that keyword
+- 1+ found → adopt all found paths as a list in `exe_paths`. The list is ordered by modification time (newest first) for readability, but the actual selection at runtime always picks the newest available regardless of list order.
 
-Report findings: "A: 找到 ./x64/Debug/A.exe → 已采用", "B: 未找到 → 请手动输入".
+Report findings: "A: 找到 2 个 — ./x64/Debug/A.exe, ./sub_project/A/A.exe → 已记录", "B: 未找到 → 请手动输入".
+
+**"手动指定"** → for each keyword, ask for one or more absolute exe paths (comma-separated). Record as a list in `exe_paths`. If the user only provides one path, still store as a single-element list.
 
 
 ## Step 3: Progressive Hints
@@ -257,7 +258,9 @@ code_paths:
   default: <path or dir or "">
   <keyword>: <path>  # only for files mode
 exe_paths:
-  <keyword>: <path>  # optional, for C++ hack verification
+  <keyword>:  # list of paths; runtime picks newest
+    - <path1>
+    - <path2>
 
 collect_mistakes:
   mode: <"manual"|"confirm"|"auto">
@@ -312,41 +315,37 @@ Also remind: "以后想改配置，用 `/acm-trainer:acm-config`。"
 
 ## Step 13: Auto-Configure Permissions
 
-Reduce permission prompts by adding trusted directories to `.claude/settings.local.json`. Two directories need access:
+Reduce permission prompts by adding trusted directories and commands to `.claude/settings.local.json`. Permissions are added **conditionally** based on user's choices — not all unconditionally:
 
-1. **项目目录** — so config reads and code file lookups don't trigger permission prompts.
-2. **插件缓存根目录** — so the acm skill can read its own reference files (`workflows.md`, `code-review.md`) without prompts. This skill file lives inside the plugin cache at `<root>/<version>/skills/acm-setup/SKILL.md`. Go up 3 levels from this skill file's directory to reach the plugin cache root (the `acm-trainer` directory). For a typical install: `~/.claude/plugins/cache/Yves-plugin/acm-trainer/` (Windows: `%USERPROFILE%\.claude\plugins\cache\Yves-plugin\acm-trainer\`).
+**Always added** (needed for any acm operation):
+- Project directory and plugin cache root → `additionalDirectories` (Read access)
+
+**Conditional — only if `exe_paths` is non-empty** (user configured exe paths in Step 2b):
+- `Bash(stat *)` — comparing exe vs source timestamps
+- `Bash(*.exe *)` — running compiled exe for hack verification
+
+Write permissions for mistake/solution collection are NOT added here — they are handled by acm-config's Permission Follow-up when the user configures those features.
 
 AskUserQuestion:
 - header: "权限配置"
-- question: "是否自动配置项目权限？选"是"会将项目目录加入 settings.local.json，之后读取代码文件、搜索配置不会再弹出授权提示。（不会影响其他项目）"
+- question: "是否自动配置权限？包括读取代码/配置<if exe configured: + 比较时间戳 + 运行 exe>。之后不再弹授权提示。（不影响其他项目）"
 - multiSelect: false
 - options:
-  - "是，自动配置" — 自动把项目目录加入权限白名单
+  - "是，自动配置" — 自动添加所需权限
   - "不用了" — 跳过，保留默认权限设置
 
 If user chooses "不用了", skip to done.
 
 **If user chooses "是，自动配置":**
 
-1. Read `.claude/settings.local.json` in the project root (current working directory). If it doesn't exist, start with `{}`.
-2. Parse existing JSON. Merge the following into it (preserve all existing settings):
-
-```json
-{
-  "permissions": {
-    "additionalDirectories": [
-      "<current working directory with backslashes escaped>",
-      "<plugin cache root with backslashes escaped>"
-    ]
-  }
-}
-```
-
-`additionalDirectories` covers all Read operations — no need for broad `Glob` or `Bash` entries.
-
-3. If existing `permissions.allow` already has entries, merge — do NOT replace. If existing `permissions.additionalDirectories` already has entries, merge — do NOT replace.
-4. Write the merged result back to `.claude/settings.local.json` with the Write tool.
-5. Confirm: "项目及插件权限已配置。之后 acm 读代码、读 reference 文件、查配置不会弹授权了。"
+1. Read `.claude/settings.local.json` in the project root. If it doesn't exist, start with `{}`.
+2. Build permissions. Always include:
+   ```json
+   {"permissions": {"additionalDirectories": ["<project dir>", "<plugin cache root>"]}}
+   ```
+3. If `exe_paths` is non-empty (user configured exe in Step 2b), also add to `permissions.allow`: `"Bash(stat *)"`, `"Bash(*.exe *)"`.
+4. Merge into existing JSON (preserve all existing settings, merge arrays without duplicates).
+5. Write back.
+6. Confirm: "已配置权限<list what was added>。"
 
 If `.claude/settings.local.json` was newly created (didn't exist before), also add it to `.gitignore` if one exists and the entry isn't there yet.
