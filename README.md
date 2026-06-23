@@ -21,6 +21,7 @@
 | 🔍 **代码审查** | 扫描溢出、越界、未初始化、TLE 风险，生成 Hack 数据 |
 | 📖 **算法讲解** | 数据结构 & 算法精讲，附 C++ 模板代码和练习题推荐 |
 | 📊 **复杂度分析** | 逐段分析时空复杂度，对比约束判断是否通过 |
+| 📄 **Markdown 导出** | 题解/讲解/审查自动输出为 .md 文件，等宽字体对齐，兼容 Typora |
 | ⚙️ **配置持久化** | 一次初始化，代码位置 / 引导方式 / 模板分析 / 语言偏好全记住 |
 
 ## 📦 安装
@@ -80,6 +81,10 @@ progressive_hints: true
 auto_edit_code: false              # 是否允许自动发起代码修改
 terminology: mixed                 # pure_chinese | mixed
 solution_language: cpp             # cpp | py | match_code
+markdown_output:
+  mode: disabled                   # disabled | manual | auto
+  perm: false
+markdown_output_path: ""           # 空=源码同目录，或自定义路径
 time_limit_baseline: 100000000     # O(N) safe N per second
 has_template: true
 template_path: D:\my\template.cpp

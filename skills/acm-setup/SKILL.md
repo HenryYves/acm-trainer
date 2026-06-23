@@ -114,6 +114,28 @@ AskUserQuestion:
 
 Set `collect_mistakes: {mode: "manual", perm: false}` for "手动收集", `{mode: "confirm", perm: false}` for "自动总结确认", `{mode: "auto", perm: false}` for "自动静默收集". (perm starts false; user configures it later via acm-config.)
 
+## Step 4d: Markdown Output
+
+AskUserQuestion:
+- header: "Markdown输出"
+- question: "是否将题解/算法讲解/代码审查的内容自动输出到 Markdown 文件？自动模式下，回答会追加写入与源代码同名的 .md 文件（如 A.cpp → A.md），用等宽字体控制 ASCII 比例线对齐，方便 Typora 等编辑器阅读。"
+- multiSelect: false
+- options:
+  - "禁止（默认）" — 不自动输出 Markdown 文件
+  - "手动指定" — 只有你说"输出到.md"/"保存到文件"等关键词时才输出
+  - "自动输出" — 题解/算法讲解/代码审查后自动追加写入 .md 文件
+
+Set `markdown_output: {mode: "disabled", perm: false}` for "禁止", `{mode: "manual", perm: false}` for "手动", `{mode: "auto", perm: false}` for "自动".
+
+Then ask for output path:
+AskUserQuestion:
+- header: "输出路径"
+- question: "Markdown 文件保存到哪个目录？默认留空（与源代码同目录，如 A.cpp → A.md）。"
+- multiSelect: false
+- options:
+  - "默认（与源代码同目录）" — set `markdown_output_path: ""`
+  - "自定义目录" — ask for absolute path, set `markdown_output_path: <path>`
+
 ## Step 5: Template Code
 
 AskUserQuestion:
@@ -226,6 +248,7 @@ Show a summary of all choices:
 自动修改代码: <允许/不允许>
 收录题解: <手动/自动>
 错误收集: <手动收集 / 自动总结确认 / 自动静默收集>
+Markdown输出: <禁止/手动/自动> 路径: <空=源码同目录/自定义路径>
 
 模板代码: <无 / 路径 + 摘要>
 变值常量: <无 / 选中的常量名列表>
@@ -268,12 +291,16 @@ collect_mistakes:
 auto_collect_solution:
   mode: <true|false>
   perm: false
+markdown_output:
+  mode: <"disabled"|"manual"|"auto">
+  perm: false
+markdown_output_path: "<path or empty>"
 progressive_hints: <true|false>
 auto_edit_code: <true|false>
 terminology: <pure_chinese|mixed>
 solution_language: <cpp|py|match_code>
 time_limit_baseline: <100000000 (1e8) or custom value>
-config_version: "0.2.13"
+config_version: "0.2.14"
 remind_config_update: true
 last_modified: "<today's date YYYY-MM-DD>"
 has_template: <true|false>

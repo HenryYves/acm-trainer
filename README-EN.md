@@ -21,6 +21,7 @@ Problem Solving · Code Review · Algorithm Explanation · Complexity Analysis �
 | 🔍 **Code Review** | Scan for overflow, off-by-one, uninitialized variables, TLE risks, and generate targeted hack cases |
 | 📖 **Algorithm Tutorials** | In-depth data structure & algorithm explanations with clean template code and practice problem recommendations |
 | 📊 **Complexity Analysis** | Break down time/space complexity section by section, check against constraints |
+| 📄 **Markdown Export** | Auto-save solutions/explanations/reviews as .md files, monospace-aligned, Typora compatible |
 | ⚙️ **Persistent Config** | One-time setup: code location, hint style, template analysis, language, OJ speed calibration |
 
 ## 📦 Installation
@@ -76,6 +77,10 @@ progressive_hints: true
 auto_edit_code: false              # whether to auto-edit code files
 terminology: mixed                 # pure_chinese | mixed
 solution_language: cpp             # cpp | py | match_code
+markdown_output:
+  mode: disabled                   # disabled | manual | auto
+  perm: false
+markdown_output_path: ""           # empty=same dir as source, or custom path
 time_limit_baseline: 100000000     # O(N) safe N per second
 has_template: true
 template_path: /path/to/template.cpp

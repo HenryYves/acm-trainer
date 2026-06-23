@@ -69,6 +69,8 @@ code_location_mode  | enum   | none        | Step 2  | Code Location
 code_paths          | map    | {}          | Step 2  | Code Location
 progressive_hints   | bool   | true        | Step 3  | Teaching Approach
 auto_collect_solution|mapping|{mode:false, perm:false}| Step 4b | Solution Collection ({mode, perm})
+markdown_output     | mapping| {mode:"disabled", perm:false} | Step 4d | Markdown Output ({mode, perm})
+markdown_output_path| string | ""          | Step 4d | Markdown Output
 auto_edit_code      | bool   | false       | Step 4  | Auto-Edit Behavior
 has_template        | bool   | false       | Step 5  | Template-Aware Review
 template_boundary   | int    | 0           | Step 6  | Template-Aware Review
@@ -101,9 +103,11 @@ acm: 启动检查 config_version，过旧提示用户可重新初始化（不强
 - 永远改源目录不改缓存：用户指定开发目录（如 D:\...\plugins\acm-trainer\）是源，~/.claude/plugins/cache/ 是安装缓存会被覆盖。改插件前先确认源目录路径。(v0.2.6)
 - 格式不兼容直接升级不搞兼容层：配置项格式变了就升级 config_version + 格式检测，让 acm-config 强制用户重配，不在 acm skill 里维护 backward compat 逻辑。(v0.2.16)
 - AskUserQuestion 每问题最多 4 个选项：配置页面设计时每个 question 的 options 数组不能超过 4 项，否则报 `too_big` 错误。超限时拆成更多 question。(v0.2.14)
+- 开发插件不改用户项目文件：改 acm-trainer 源码只动源目录（如 D:\...\plugins\acm-trainer\），不改用户项目下的 .claude/ 配置文件。用户需要自己测试安装流程和配置管理是否正常工作，提前替他改了反而测不出 bug。(v0.2.18)
 
 ## 更新历史
 日期 | 版本 | 变更 | 详情
+2026-06-23 | 0.2.19 | 新增markdown_output配置(references/markdown-output.md) + config_version→0.2.14 | .claude-plugin/changelog/0.2.19.md
 2026-06-16 | 0.2.18 | exe_paths多路径+perm主动同步 | .claude-plugin/changelog/0.2.18.md
 2026-05-26 | 0.2.17 | 权限自动配置+收紧+拒绝记忆 | .claude-plugin/changelog/0.2.17.md
 2026-05-22 | 0.2.16 | 配置mapping格式+perm跟踪+acm-data导入导出；无向后兼容；config_version→0.2.13 | .claude-plugin/changelog/0.2.16.md

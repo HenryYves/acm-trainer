@@ -18,12 +18,13 @@ Read `.claude/acm-trainer.local.md`.
 
 ```
 === ACM Trainer 当前配置 ===
-配置版本: <config_version>（最新: 0.2.13）
+配置版本: <config_version>（最新: 0.2.14）
 最后修改: <last_modified>
 代码位置: <none | 单文件:path | 一题一文件:dir | 多文件:N个关键词>
 渐进式引导: <是/否>
 自动修改代码: <允许/不允许>
 收录题解: <手动/自动> 权限: <已配置/未配置>
+Markdown输出: <禁止/手动/自动> 权限: <已配置/未配置> 路径: <空=源码同目录/自定义路径>
 术语风格: <pure_chinese/mixed>
 编程语言: <cpp/py/match_code>
 模板代码: <有/无>
@@ -35,24 +36,26 @@ Read `.claude/acm-trainer.local.md`.
 =========================
 ```
 
-**Version check**: The latest config schema version is `0.2.13`.
+**Version check**: The latest config schema version is `0.2.14`.
 
 **Perm sync**: Read `.claude/settings.local.json`. Check the `permissions.allow` array for write permissions and sync the config's `perm` flags to match reality:
 - If `"Write(.claude/acm-trainer/mistakes.md)"` is in `permissions.allow` → set `collect_mistakes.perm: true` (regardless of current value)
 - If `"Write(.claude/acm-trainer/solutions/*)"` is in `permissions.allow` → set `auto_collect_solution.perm: true` (regardless of current value)
+- If `"Write(*.md)"` is in `permissions.allow` → set `markdown_output.perm: true` (regardless of current value)
 - If not found → keep current `perm` value (may be `false` or absent)
 
 This runs on EVERY Config invocation, not just format upgrades — it prevents stale `perm: false` when the user manually added permissions. Do NOT mention this sync to the user unless a stale value was corrected (then note: "已同步权限状态：<feature> perm false→true").
 
-**Format check**: Regardless of config_version, validate each field's format. If `collect_mistakes` is a plain string or bool (not a mapping with `mode` key), or `auto_collect_solution` is a plain bool (not a mapping with `mode` key), the config has old-format fields that need migration. Even if `config_version` is current, old-format fields must be upgraded.
+**Format check**: Regardless of config_version, validate each field's format. If `collect_mistakes` is a plain string or bool (not a mapping with `mode` key), or `auto_collect_solution` is a plain bool (not a mapping with `mode` key), or `markdown_output` is a plain string or bool (not a mapping with `mode` key), the config has old-format fields that need migration. Even if `config_version` is current, old-format fields must be upgraded.
 
-If config_version < `"0.2.13"` **or** any field is in old format:
+If config_version < `"0.2.14"` **or** any field is in old format:
 
 1. Check for old-format fields specifically:
    - `collect_mistakes` is a string or bool → needs migration to `{mode, perm}`
    - `auto_collect_solution` is a bool → needs migration to `{mode, perm}`
+   - `markdown_output` is a string or bool → needs migration to `{mode, perm}`
    
-   If any old-format fields found: show a message listing them, e.g., "检测到 N 个配置项格式过旧（collect_mistakes: bool→mapping, auto_collect_solution: bool→mapping），需更新。" Then AskUserQuestion with header "配置格式升级", single option "立即升级" (no skip — old format fields must be fixed). Convert old values: `collect_mistakes: true` → `{mode: "auto", perm: false}`, `false` → `{mode: "manual", perm: false}`, `"auto"/"manual"/"confirm"` string → `{mode: "<value>", perm: false}`. `auto_collect_solution: true` → `{mode: true, perm: false}`, `false` → `{mode: false, perm: false}`.
+   If any old-format fields found: show a message listing them, e.g., "检测到 N 个配置项格式过旧（collect_mistakes: bool→mapping, markdown_output: bool→mapping），需更新。" Then AskUserQuestion with header "配置格式升级", single option "立即升级" (no skip — old format fields must be fixed). Convert old values: `collect_mistakes: true` → `{mode: "auto", perm: false}`, `false` → `{mode: "manual", perm: false}`, `"auto"/"manual"/"confirm"` string → `{mode: "<value>", perm: false}`. `auto_collect_solution: true` → `{mode: true, perm: false}`, `false` → `{mode: false, perm: false}`. `markdown_output: true` → `{mode: "auto", perm: false}`, `false` → `{mode: "disabled", perm: false}`, `"disabled"/"manual"/"auto"` string → `{mode: "<value>", perm: false}`.
 
 2. Also check for missing fields against the complete field list (defaults from acm-setup):
 
@@ -68,12 +71,14 @@ If config_version < `"0.2.13"` **or** any field is in old format:
    | `time_limit_baseline` | Step 9 | `100000000` |
    | `exe_paths` | Step 2b | `{}` |
    | `collect_mistakes` | Step 4c | `{mode: "manual", perm: false}` |
+   | `markdown_output` | Step 4d | `{mode: "disabled", perm: false}` |
+   | `markdown_output_path` | Step 4d | `""` |
    | `has_template` | Step 5 | `false` |
    | `remind_config_update` | — | `true` |
 
 3. If only missing fields (no old-format): AskUserQuestion with header "配置升级", listing missing fields. Options: "是，逐项配置" / "跳过". Same flow as before.
 
-4. After all fixes, write config with `config_version: "0.2.13"`, `last_modified: <today>`.
+4. After all fixes, write config with `config_version: "0.2.14"`, `last_modified: <today>`.
 
 ### Auto Permission Check
 
@@ -81,6 +86,7 @@ After format upgrade (and ONLY during format upgrade — not on every Config run
 
 - `collect_mistakes.mode` in `{"auto", "confirm"}` with `collect_mistakes.perm: false`
 - `auto_collect_solution.mode: true` with `auto_collect_solution.perm: false`
+- `markdown_output.mode` in `{"auto", "manual"}` with `markdown_output.perm: false`
 
 If any, run the Permission Follow-up flow (see Step 3) for each. Then also offer general read permissions ("权限配置" from Step 2 Question 2).
 
@@ -128,6 +134,7 @@ Present all options in a **single** `AskUserQuestion` call with 4 questions (eac
 - multiSelect: true
 - options:
   - "变值常量" — 修改每题需要调整的常量列表
+  - "Markdown输出" — 切换禁止/手动/自动输出题解到 .md 文件（Typora 兼容）
   - "以上都没有" — 不需要修改
 
 If the user has no template configured (`has_template: false`), hide "变值常量" option in Question 4. If that leaves Question 4 with only 1 option, keep both (min 2 is satisfied).
@@ -175,9 +182,11 @@ For "评测机速度": use the same options as acm-setup Step 9. Update `time_li
 
 For "版本更新提醒": AskUserQuestion — header: "版本提醒", question: "是否在配置版本落后时提醒更新？", options: "是，提醒我" (set `true`) / "不用提醒" (set `false`). Update `remind_config_update`.
 
+For "Markdown输出": AskUserQuestion — header: "Markdown输出", question: "是否将题解/算法讲解/代码审查输出到 .md 文件？（与源码同名同目录，如 A.cpp → A.md）", options: "禁止（默认）" (set mode to `"disabled"`), "手动指定" (set mode to `"manual"`), "自动输出" (set mode to `"auto"`). Set `markdown_output.mode`. Keep existing `markdown_output.perm` if present, otherwise default `false`. Then ask for output path: AskUserQuestion — header: "输出路径", question: "Markdown 输出目录？默认留空（与源码同目录）。", options: "默认（与源码同目录）" (set `""`), "自定义目录" (ask and set path). Then, if mode is `"auto"` or `"manual"` and perm is `false`, run the per-feature permission flow (see "Permission Follow-up" below).
+
 ### Permission Follow-up
 
-After setting `collect_mistakes.mode` (to `"auto"`/`"confirm"`) or `auto_collect_solution.mode` (to `true`), if the corresponding `perm` is `false`, offer to configure write permission immediately:
+After setting `collect_mistakes.mode` (to `"auto"`/`"confirm"`), `auto_collect_solution.mode` (to `true`), or `markdown_output.mode` (to `"auto"`/`"manual"`), if the corresponding `perm` is `false`, offer to configure write permission immediately:
 
 AskUserQuestion:
 - header: "权限配置"
@@ -192,6 +201,7 @@ If "是，自动配置":
 2. Add the appropriate Write rule to `permissions.allow`:
    - For `collect_mistakes`: `"Write(.claude/acm-trainer/mistakes.md)"`
    - For `auto_collect_solution`: `"Write(.claude/acm-trainer/solutions/*)"`
+   - For `markdown_output`: `"Write(*.md)"`
 3. Merge without duplicates, write back.
 4. Set the corresponding `perm` to `true`.
 5. Confirm: "`<功能名>` 的写入权限已配置。"
@@ -259,15 +269,15 @@ AskUserQuestion:
 
 ```
 code_location_mode, code_paths, progressive_hints, auto_edit_code,
-auto_collect_solution, terminology, solution_language, time_limit_baseline,
-exe_paths, collect_mistakes, has_template, template_boundary,
-template_entry, per_problem_constants, config_version, remind_config_update,
-last_modified
+auto_collect_solution, markdown_output, markdown_output_path, terminology,
+solution_language, time_limit_baseline, exe_paths, collect_mistakes,
+has_template, template_boundary, template_entry, per_problem_constants,
+config_version, remind_config_update, last_modified
 ```
 
 1. From the parsed old YAML frontmatter, keep only keys that appear in the whitelist above. Drop any others.
 2. Merge the new/changed values into the filtered config.
-3. Set `config_version` to `"0.2.13"` and `last_modified` to today's date.
+3. Set `config_version` to `"0.2.14"` and `last_modified` to today's date.
 4. **Write fields in this exact order** (matches acm/SKILL.md parsing order, so the model reads sequentially without jumping):
 
 ```yaml
@@ -284,6 +294,8 @@ per_problem_constants
 exe_paths
 collect_mistakes         # as mapping {mode, perm}
 auto_collect_solution    # as mapping {mode, perm}
+markdown_output          # as mapping {mode, perm}
+markdown_output_path
 time_limit_baseline
 config_version
 remind_config_update
